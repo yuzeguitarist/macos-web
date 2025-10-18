@@ -11,7 +11,13 @@ class MacOS {
     init() {
         // 启动动画完成后显示桌面
         setTimeout(() => {
-            document.getElementById('desktop').style.display = 'block';
+            const desktop = document.getElementById('desktop');
+            desktop.style.display = 'block';
+            desktop.style.opacity = '0';
+            setTimeout(() => {
+                desktop.style.transition = 'opacity 0.5s ease';
+                desktop.style.opacity = '1';
+            }, 50);
             this.initEventListeners();
             this.updateTime();
             setInterval(() => this.updateTime(), 1000);
@@ -32,6 +38,20 @@ class MacOS {
         // 桌面点击取消所有窗口焦点
         document.querySelector('.desktop-wallpaper').addEventListener('click', () => {
             this.deactivateAllWindows();
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            // Cmd+W 或 Ctrl+W 关闭当前窗口
+            if ((e.metaKey || e.ctrlKey) && e.key === 'w' && this.activeWindow) {
+                e.preventDefault();
+                this.closeWindow(this.activeWindow);
+            }
+            // Cmd+M 或 Ctrl+M 最小化当前窗口
+            if ((e.metaKey || e.ctrlKey) && e.key === 'm' && this.activeWindow) {
+                e.preventDefault();
+                this.minimizeWindow(this.activeWindow);
+            }
         });
     }
 
@@ -101,8 +121,8 @@ class MacOS {
             },
             calculator: {
                 title: '计算器',
-                width: 320,
-                height: 520,
+                width: 340,
+                height: 560,
                 content: this.createCalculatorContent()
             },
             settings: {
@@ -157,7 +177,48 @@ class MacOS {
         // 设置为活动窗口
         this.focusWindow(appName);
 
+        // 初始化应用特定功能
+        setTimeout(() => {
+            this.initAppFeatures(window, appName);
+        }, 100);
+
         return window;
+    }
+
+    initAppFeatures(window, appName) {
+        if (appName === 'terminal') {
+            const terminal = window.querySelector('[data-terminal="true"]');
+            const input = terminal?.querySelector('.terminal-input');
+            if (input) {
+                input.focus();
+                // Remove any existing listeners
+                const newInput = input.cloneNode(true);
+                input.parentNode.replaceChild(newInput, input);
+                
+                newInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const command = newInput.value.trim();
+                        if (command) {
+                            this.executeTerminalCommand(terminal, command);
+                        } else {
+                            this.executeTerminalCommand(terminal, '');
+                        }
+                        newInput.value = '';
+                    }
+                });
+            }
+        } else if (appName === 'calculator') {
+            const calcContent = window.querySelector('.calculator-content');
+            if (calcContent) {
+                this.initCalculator(calcContent);
+            }
+        } else if (appName === 'settings') {
+            const settingsContent = window.querySelector('.settings-content');
+            if (settingsContent) {
+                this.initSettings(settingsContent);
+            }
+        }
     }
 
     addWindowEvents(window, appName) {
@@ -199,8 +260,15 @@ class MacOS {
         });
 
         // 点击窗口聚焦
-        window.addEventListener('mousedown', () => {
+        window.addEventListener('mousedown', (e) => {
             this.focusWindow(appName);
+            // 如果点击的是终端，聚焦输入框
+            if (appName === 'terminal' && !e.target.classList.contains('window-control')) {
+                const input = window.querySelector('.terminal-input');
+                if (input) {
+                    setTimeout(() => input.focus(), 0);
+                }
+            }
         });
 
         // 窗口控制按钮
@@ -255,6 +323,9 @@ class MacOS {
     maximizeWindow(appName) {
         const window = this.windows.get(appName);
         if (!window) return;
+
+        // 计算器不允许最大化
+        if (appName === 'calculator') return;
 
         if (window.dataset.maximized === 'true') {
             // 还原
@@ -314,33 +385,33 @@ class MacOS {
                     <div class="finder-section">
                         <div class="finder-section-title">个人收藏</div>
                         <div class="finder-item active">
-                            <span class="finder-item-icon">⭐</span>
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                             <span>最近使用</span>
                         </div>
                         <div class="finder-item">
-                            <span class="finder-item-icon">📥</span>
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
                             <span>下载</span>
                         </div>
                         <div class="finder-item">
-                            <span class="finder-item-icon">📄</span>
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
                             <span>文稿</span>
                         </div>
                         <div class="finder-item">
-                            <span class="finder-item-icon">🖼️</span>
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
                             <span>图片</span>
                         </div>
                     </div>
                     <div class="finder-section">
                         <div class="finder-section-title">iCloud</div>
                         <div class="finder-item">
-                            <span class="finder-item-icon">☁️</span>
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
                             <span>iCloud Drive</span>
                         </div>
                     </div>
                     <div class="finder-section">
                         <div class="finder-section-title">位置</div>
                         <div class="finder-item">
-                            <span class="finder-item-icon">💻</span>
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
                             <span>我的 Mac</span>
                         </div>
                     </div>
@@ -348,27 +419,27 @@ class MacOS {
                 <div class="finder-main">
                     <div class="finder-files">
                         <div class="finder-file">
-                            <div class="finder-file-icon">📁</div>
+                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><path d="M50 8H22l-8 8v36c0 2.2 1.8 4 4 4h32c2.2 0 4-1.8 4-4V12c0-2.2-1.8-4-4-4z" fill="#42A5F5"/><path d="M22 8l-8 8h6c1.1 0 2-.9 2-2V8z" fill="#1E88E5"/></svg>
                             <div class="finder-file-name">文件夹</div>
                         </div>
                         <div class="finder-file">
-                            <div class="finder-file-icon">📄</div>
+                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="8" width="40" height="48" rx="4" fill="#fff"/><rect x="12" y="8" width="40" height="48" rx="4" fill="none" stroke="#90A4AE" stroke-width="2"/><line x1="18" y1="18" x2="46" y2="18" stroke="#90A4AE" stroke-width="2"/><line x1="18" y1="26" x2="46" y2="26" stroke="#90A4AE" stroke-width="2"/><line x1="18" y1="34" x2="38" y2="34" stroke="#90A4AE" stroke-width="2"/></svg>
                             <div class="finder-file-name">文档.txt</div>
                         </div>
                         <div class="finder-file">
-                            <div class="finder-file-icon">🖼️</div>
+                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="8" y="12" width="48" height="40" rx="4" fill="#66BB6A"/><circle cx="22" cy="28" r="6" fill="#FFF59D"/><path d="M8 42l12-12 8 8 16-16 12 12v8c0 2.2-1.8 4-4 4H12c-2.2 0-4-1.8-4-4v-0z" fill="#43A047"/></svg>
                             <div class="finder-file-name">图片.png</div>
                         </div>
                         <div class="finder-file">
-                            <div class="finder-file-icon">🎵</div>
+                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="8" width="40" height="48" rx="4" fill="#EC407A"/><circle cx="32" cy="28" r="8" fill="white"/><path d="M26 32c0 3.3 2.7 6 6 6s6-2.7 6-6" stroke="white" stroke-width="2" fill="none"/></svg>
                             <div class="finder-file-name">音乐.mp3</div>
                         </div>
                         <div class="finder-file">
-                            <div class="finder-file-icon">🎬</div>
+                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="8" width="40" height="48" rx="4" fill="#7E57C2"/><path d="M26 24l16 8-16 8V24z" fill="white"/></svg>
                             <div class="finder-file-name">视频.mp4</div>
                         </div>
                         <div class="finder-file">
-                            <div class="finder-file-icon">📦</div>
+                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="12" width="40" height="40" rx="4" fill="#FF9800"/><path d="M20 24h24v4H20zm0 8h24v4H20zm0 8h16v4H20z" fill="white"/></svg>
                             <div class="finder-file-name">压缩包.zip</div>
                         </div>
                     </div>
@@ -378,35 +449,17 @@ class MacOS {
     }
 
     createTerminalContent() {
-        const content = document.createElement('div');
-        content.className = 'terminal-content';
-        content.innerHTML = `
-            <div class="terminal-line">Last login: ${new Date().toLocaleString('zh-CN')}</div>
-            <div class="terminal-line">macOS Web Simulator v1.0</div>
-            <div class="terminal-line">&nbsp;</div>
-            <div class="terminal-input-line">
-                <span class="terminal-prompt">user@macos ~ % </span>
-                <input type="text" class="terminal-input" autofocus />
+        return `
+            <div class="terminal-content" data-terminal="true">
+                <div class="terminal-line">Last login: ${new Date().toLocaleString('zh-CN')}</div>
+                <div class="terminal-line">macOS Web Simulator v1.0</div>
+                <div class="terminal-line">&nbsp;</div>
+                <div class="terminal-input-line">
+                    <span class="terminal-prompt">user@macos ~ % </span>
+                    <input type="text" class="terminal-input" autofocus />
+                </div>
             </div>
         `;
-
-        // 添加终端交互
-        setTimeout(() => {
-            const input = content.querySelector('.terminal-input');
-            if (input) {
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        const command = input.value.trim();
-                        if (command) {
-                            this.executeTerminalCommand(content, command);
-                        }
-                        input.value = '';
-                    }
-                });
-            }
-        }, 100);
-
-        return content.outerHTML;
     }
 
     executeTerminalCommand(terminal, command) {
@@ -415,20 +468,27 @@ class MacOS {
         // 显示输入的命令
         const commandLine = document.createElement('div');
         commandLine.className = 'terminal-line';
-        commandLine.innerHTML = `<span class="terminal-prompt">user@macos ~ % </span>${command}`;
+        commandLine.innerHTML = `<span class="terminal-prompt">user@macos ~ % </span>${command || ''}`;
         terminal.insertBefore(commandLine, inputLine);
+
+        if (command === '') {
+            // 只显示空行
+            terminal.scrollTop = terminal.scrollHeight;
+            return;
+        }
 
         // 执行命令
         const output = document.createElement('div');
         output.className = 'terminal-line';
         
         const commands = {
-            'help': '可用命令: help, clear, date, echo, ls, pwd, whoami',
+            'help': '可用命令: help, clear, date, echo, ls, pwd, whoami, uname',
             'clear': 'CLEAR',
             'date': new Date().toLocaleString('zh-CN'),
             'ls': 'Desktop  Documents  Downloads  Pictures  Music  Videos',
             'pwd': '/Users/user',
-            'whoami': 'user'
+            'whoami': 'user',
+            'uname': 'Darwin MacOS 14.0'
         };
 
         if (command === 'clear') {
@@ -440,13 +500,17 @@ class MacOS {
         } else if (commands[command]) {
             output.textContent = commands[command];
             terminal.insertBefore(output, inputLine);
-        } else {
-            output.textContent = `command not found: ${command}`;
+        } else if (command) {
+            output.textContent = `zsh: command not found: ${command}`;
             terminal.insertBefore(output, inputLine);
         }
 
         // 滚动到底部
         terminal.scrollTop = terminal.scrollHeight;
+        
+        // 重新聚焦输入框
+        const input = terminal.querySelector('.terminal-input');
+        if (input) input.focus();
     }
 
     createNotesContent() {
@@ -483,43 +547,36 @@ class MacOS {
     }
 
     createCalculatorContent() {
-        const content = document.createElement('div');
-        content.className = 'calculator-content';
-        content.innerHTML = `
-            <div class="calculator-display">0</div>
-            <div class="calculator-buttons">
-                <button class="calculator-button function">AC</button>
-                <button class="calculator-button function">±</button>
-                <button class="calculator-button function">%</button>
-                <button class="calculator-button operator">÷</button>
-                
-                <button class="calculator-button">7</button>
-                <button class="calculator-button">8</button>
-                <button class="calculator-button">9</button>
-                <button class="calculator-button operator">×</button>
-                
-                <button class="calculator-button">4</button>
-                <button class="calculator-button">5</button>
-                <button class="calculator-button">6</button>
-                <button class="calculator-button operator">−</button>
-                
-                <button class="calculator-button">1</button>
-                <button class="calculator-button">2</button>
-                <button class="calculator-button">3</button>
-                <button class="calculator-button operator">+</button>
-                
-                <button class="calculator-button zero">0</button>
-                <button class="calculator-button">.</button>
-                <button class="calculator-button operator">=</button>
+        return `
+            <div class="calculator-content">
+                <div class="calculator-display">0</div>
+                <div class="calculator-buttons">
+                    <button class="calculator-button function">AC</button>
+                    <button class="calculator-button function">±</button>
+                    <button class="calculator-button function">%</button>
+                    <button class="calculator-button operator">÷</button>
+                    
+                    <button class="calculator-button">7</button>
+                    <button class="calculator-button">8</button>
+                    <button class="calculator-button">9</button>
+                    <button class="calculator-button operator">×</button>
+                    
+                    <button class="calculator-button">4</button>
+                    <button class="calculator-button">5</button>
+                    <button class="calculator-button">6</button>
+                    <button class="calculator-button operator">−</button>
+                    
+                    <button class="calculator-button">1</button>
+                    <button class="calculator-button">2</button>
+                    <button class="calculator-button">3</button>
+                    <button class="calculator-button operator">+</button>
+                    
+                    <button class="calculator-button zero">0</button>
+                    <button class="calculator-button">.</button>
+                    <button class="calculator-button operator">=</button>
+                </div>
             </div>
         `;
-
-        // 添加计算器逻辑
-        setTimeout(() => {
-            this.initCalculator(content);
-        }, 100);
-
-        return content.outerHTML;
     }
 
     initCalculator(container) {
@@ -535,21 +592,30 @@ class MacOS {
             button.addEventListener('click', () => {
                 const value = button.textContent;
 
-                if (value >= '0' && value <= '9' || value === '.') {
+                if ((value >= '0' && value <= '9') || value === '.') {
+                    if (value === '.' && currentValue.includes('.')) {
+                        return; // 不允许多个小数点
+                    }
                     if (shouldResetDisplay) {
-                        currentValue = value;
+                        currentValue = value === '.' ? '0.' : value;
                         shouldResetDisplay = false;
                     } else {
-                        currentValue = currentValue === '0' ? value : currentValue + value;
+                        if (currentValue === '0' && value !== '.') {
+                            currentValue = value;
+                        } else {
+                            currentValue = currentValue + value;
+                        }
                     }
                     display.textContent = currentValue;
                 } else if (value === 'AC') {
                     currentValue = '0';
                     previousValue = null;
                     operation = null;
+                    shouldResetDisplay = false;
                     display.textContent = '0';
                 } else if (value === '±') {
-                    currentValue = String(-parseFloat(currentValue));
+                    const num = parseFloat(currentValue);
+                    currentValue = String(num === 0 ? 0 : -num);
                     display.textContent = currentValue;
                 } else if (value === '%') {
                     currentValue = String(parseFloat(currentValue) / 100);
@@ -557,6 +623,14 @@ class MacOS {
                 } else if (['+', '−', '×', '÷'].includes(value)) {
                     if (previousValue !== null && operation !== null && !shouldResetDisplay) {
                         const result = this.calculate(previousValue, currentValue, operation);
+                        if (result === 'Error') {
+                            display.textContent = result;
+                            currentValue = '0';
+                            previousValue = null;
+                            operation = null;
+                            shouldResetDisplay = false;
+                            return;
+                        }
                         display.textContent = result;
                         currentValue = result;
                     }
@@ -566,6 +640,14 @@ class MacOS {
                 } else if (value === '=') {
                     if (previousValue !== null && operation !== null) {
                         const result = this.calculate(previousValue, currentValue, operation);
+                        if (result === 'Error') {
+                            display.textContent = result;
+                            currentValue = '0';
+                            previousValue = null;
+                            operation = null;
+                            shouldResetDisplay = false;
+                            return;
+                        }
                         display.textContent = result;
                         currentValue = result;
                         previousValue = null;
@@ -581,62 +663,94 @@ class MacOS {
         const num1 = parseFloat(a);
         const num2 = parseFloat(b);
         
+        if (isNaN(num1) || isNaN(num2)) return 'Error';
+        
+        let result;
         switch (op) {
-            case '+': return String(num1 + num2);
-            case '−': return String(num1 - num2);
-            case '×': return String(num1 * num2);
-            case '÷': return num2 !== 0 ? String(num1 / num2) : 'Error';
-            default: return b;
+            case '+': result = num1 + num2; break;
+            case '−': result = num1 - num2; break;
+            case '×': result = num1 * num2; break;
+            case '÷': 
+                if (num2 === 0) return 'Error';
+                result = num1 / num2;
+                break;
+            default: return String(b);
         }
+        
+        // 格式化结果，避免浮点精度问题
+        if (Math.abs(result) < 1e-10) result = 0;
+        const formatted = result.toString();
+        return formatted.length > 12 ? result.toExponential(6) : formatted;
     }
 
     createSettingsContent() {
         return `
             <div class="settings-content">
                 <div class="settings-sidebar">
-                    <div class="settings-item active">
-                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">⚙️</div>
+                    <div class="settings-item active" data-category="general">
+                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                        </div>
                         <div class="settings-item-label">通用</div>
                     </div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🎨</div>
+                    <div class="settings-item" data-category="appearance">
+                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                        </div>
                         <div class="settings-item-label">外观</div>
                     </div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">🖥️</div>
+                    <div class="settings-item" data-category="display">
+                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/></svg>
+                        </div>
                         <div class="settings-item-label">显示器</div>
                     </div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">🔒</div>
+                    <div class="settings-item" data-category="security">
+                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                        </div>
                         <div class="settings-item-label">安全性与隐私</div>
                     </div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">🔔</div>
+                    <div class="settings-item" data-category="notifications">
+                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                        </div>
                         <div class="settings-item-label">通知</div>
                     </div>
-                    <div class="settings-item">
-                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">🌐</div>
+                    <div class="settings-item" data-category="network">
+                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        </div>
                         <div class="settings-item-label">网络</div>
                     </div>
                 </div>
-                <div class="settings-main">
+                <div class="settings-main" id="settingsMain">
                     <div class="settings-section">
                         <div class="settings-section-title">通用设置</div>
                         <div class="settings-option">
-                            <div class="settings-option-label">外观模式</div>
-                            <div class="settings-toggle active">
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">深色模式</div>
+                                <div class="settings-option-desc">使用深色外观</div>
+                            </div>
+                            <div class="settings-toggle active" data-setting="dark-mode">
                                 <div class="settings-toggle-thumb"></div>
                             </div>
                         </div>
                         <div class="settings-option">
-                            <div class="settings-option-label">自动隐藏菜单栏</div>
-                            <div class="settings-toggle">
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">自动隐藏菜单栏</div>
+                                <div class="settings-option-desc">移开光标时自动隐藏菜单栏</div>
+                            </div>
+                            <div class="settings-toggle" data-setting="hide-menu">
                                 <div class="settings-toggle-thumb"></div>
                             </div>
                         </div>
                         <div class="settings-option">
-                            <div class="settings-option-label">自动隐藏程序坞</div>
-                            <div class="settings-toggle">
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">自动隐藏程序坞</div>
+                                <div class="settings-option-desc">移开光标时自动隐藏程序坞</div>
+                            </div>
+                            <div class="settings-toggle" data-setting="hide-dock">
                                 <div class="settings-toggle-thumb"></div>
                             </div>
                         </div>
@@ -644,14 +758,29 @@ class MacOS {
                     <div class="settings-section">
                         <div class="settings-section-title">系统偏好设置</div>
                         <div class="settings-option">
-                            <div class="settings-option-label">启用屏幕保护程序</div>
-                            <div class="settings-toggle active">
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">启用屏幕保护程序</div>
+                                <div class="settings-option-desc">空闲时启动屏幕保护程序</div>
+                            </div>
+                            <div class="settings-toggle active" data-setting="screensaver">
                                 <div class="settings-toggle-thumb"></div>
                             </div>
                         </div>
                         <div class="settings-option">
-                            <div class="settings-option-label">显示电池百分比</div>
-                            <div class="settings-toggle active">
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">显示电池百分比</div>
+                                <div class="settings-option-desc">在菜单栏显示电池电量百分比</div>
+                            </div>
+                            <div class="settings-toggle active" data-setting="battery-percent">
+                                <div class="settings-toggle-thumb"></div>
+                            </div>
+                        </div>
+                        <div class="settings-option">
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">窗口动画效果</div>
+                                <div class="settings-option-desc">打开和关闭窗口时的动画效果</div>
+                            </div>
+                            <div class="settings-toggle active" data-setting="animations">
                                 <div class="settings-toggle-thumb"></div>
                             </div>
                         </div>
@@ -659,6 +788,29 @@ class MacOS {
                 </div>
             </div>
         `;
+    }
+
+    initSettings(container) {
+        const toggles = container.querySelectorAll('.settings-toggle');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                toggle.classList.toggle('active');
+                const setting = toggle.dataset.setting;
+                // 这里可以添加实际的设置功能
+                console.log(`Setting ${setting} toggled:`, toggle.classList.contains('active'));
+            });
+        });
+
+        const sidebarItems = container.querySelectorAll('.settings-item');
+        sidebarItems.forEach(item => {
+            item.addEventListener('click', () => {
+                sidebarItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                const category = item.dataset.category;
+                // 可以根据类别切换不同的设置面板
+                console.log(`Settings category changed to: ${category}`);
+            });
+        });
     }
 
     createBrowserContent() {
