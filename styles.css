@@ -86,8 +86,11 @@ body {
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-image: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>'), 
-                  linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-image: url('https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&h=1080&fit=crop'), 
+                      linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     z-index: 0;
 }
 
@@ -416,7 +419,11 @@ body {
 
 .finder-item-icon {
     margin-right: 8px;
-    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .finder-main {
@@ -446,8 +453,12 @@ body {
 }
 
 .finder-file-icon {
-    font-size: 48px;
+    width: 48px;
+    height: 48px;
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .finder-file-name {
@@ -564,34 +575,43 @@ body {
     font-family: inherit;
 }
 
+.notes-editor-title::placeholder,
+.notes-editor-content::placeholder {
+    color: #C7C7CC;
+}
+
 /* 计算器 */
 .calculator-content {
     background: #1C1C1C;
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
+    height: 100%;
 }
 
 .calculator-display {
     background: #000;
     color: #FFF;
-    padding: 24px 16px;
+    padding: 20px 16px;
     text-align: right;
-    font-size: 48px;
-    font-weight: 300;
+    font-size: 52px;
+    font-weight: 200;
     border-radius: 8px;
-    min-height: 100px;
+    min-height: 80px;
+    flex-shrink: 0;
     display: flex;
     align-items: flex-end;
     justify-content: flex-end;
     word-break: break-all;
+    overflow: hidden;
 }
 
 .calculator-buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    gap: 10px;
+    flex: 1;
 }
 
 .calculator-button {
@@ -599,11 +619,16 @@ body {
     color: white;
     border: none;
     border-radius: 50%;
+    width: 100%;
     aspect-ratio: 1;
-    font-size: 24px;
+    font-size: 28px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s;
     font-weight: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
 }
 
 .calculator-button:hover {
@@ -612,20 +637,26 @@ body {
 
 .calculator-button:active {
     transform: scale(0.95);
+    filter: brightness(0.9);
 }
 
 .calculator-button.function {
     background: #A5A5A5;
     color: #000;
+    font-weight: 500;
 }
 
 .calculator-button.operator {
     background: #FF9F0A;
+    font-size: 32px;
+    font-weight: 300;
 }
 
 .calculator-button.zero {
     grid-column: span 2;
     border-radius: 50px;
+    padding-left: 24px;
+    justify-content: flex-start;
 }
 
 /* 设置 */
@@ -697,25 +728,47 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 16px 20px;
     background: rgba(242, 242, 247, 0.6);
     border-radius: 10px;
     margin-bottom: 8px;
+    transition: background 0.2s;
+}
+
+.settings-option:hover {
+    background: rgba(242, 242, 247, 0.8);
+}
+
+.settings-option-info {
+    flex: 1;
 }
 
 .settings-option-label {
-    font-size: 14px;
+    font-size: 15px;
     color: #1D1D1F;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.settings-option-desc {
+    font-size: 13px;
+    color: #86868B;
+    line-height: 1.4;
 }
 
 .settings-toggle {
-    width: 48px;
-    height: 28px;
+    width: 51px;
+    height: 31px;
     background: #E5E5EA;
-    border-radius: 14px;
+    border-radius: 16px;
     position: relative;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+}
+
+.settings-toggle:hover {
+    opacity: 0.8;
 }
 
 .settings-toggle.active {
@@ -723,15 +776,15 @@ body {
 }
 
 .settings-toggle-thumb {
-    width: 24px;
-    height: 24px;
+    width: 27px;
+    height: 27px;
     background: white;
     border-radius: 50%;
     position: absolute;
     top: 2px;
     left: 2px;
-    transition: transform 0.3s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16);
 }
 
 .settings-toggle.active .settings-toggle-thumb {
@@ -810,15 +863,55 @@ body {
 
 .browser-page h1 {
     font-size: 36px;
+    font-weight: 700;
     margin-bottom: 20px;
+    color: #1D1D1F;
+}
+
+.browser-page h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 16px;
     color: #1D1D1F;
 }
 
 .browser-page p {
     font-size: 16px;
     line-height: 1.6;
-    color: #86868B;
+    color: #515154;
     margin-bottom: 16px;
+}
+
+/* 滚动条样式 */
+.window-content::-webkit-scrollbar,
+.terminal-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.window-content::-webkit-scrollbar-track,
+.terminal-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.window-content::-webkit-scrollbar-thumb,
+.terminal-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.window-content::-webkit-scrollbar-thumb:hover,
+.terminal-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* 优化过渡动画 */
+.window {
+    will-change: transform, opacity;
+}
+
+.dock-item {
+    will-change: transform;
 }
 
 /* 响应式 */
@@ -830,5 +923,13 @@ body {
     
     .window {
         min-width: 300px;
+    }
+    
+    .calculator-display {
+        font-size: 42px;
+    }
+    
+    .calculator-button {
+        font-size: 24px;
     }
 }
