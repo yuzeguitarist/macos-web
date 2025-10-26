@@ -5,6 +5,13 @@ class MacOS {
         this.windows = new Map();
         this.zIndexCounter = 100;
         this.activeWindow = null;
+        this.fileSystem = this.loadFileSystem();
+        this.currentNoteId = null;
+        this.pendingNoteToOpen = null;
+        this.pendingBrowserSource = null;
+        this.browserHistory = { entries: [], index: -1 };
+        this.notesContext = null;
+        this.browserContext = null;
         this.init();
     }
 
@@ -22,6 +29,125 @@ class MacOS {
             this.updateTime();
             setInterval(() => this.updateTime(), 1000);
         }, 4000);
+    }
+
+    loadFileSystem() {
+        if (typeof localStorage === 'undefined') {
+            return this.getDefaultFiles();
+        }
+        try {
+            const stored = localStorage.getItem('macos-files');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    const defaults = this.getDefaultFiles();
+                    return { ...defaults, ...parsed };
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load file system, using defaults.', error);
+        }
+        return this.getDefaultFiles();
+    }
+
+    getDefaultFiles() {
+        const timestamp = Date.now();
+        return {
+            'welcome-note': {
+                name: 'welcome-note',
+                type: 'note',
+                title: '欢迎使用备忘录',
+                content: '这是一个高度还原的 macOS 备忘录应用。\n\n在这里你可以体验:\n• 自动保存的文本编辑\n• 与 Finder、终端、Safari 的文件互通\n• 简单易用的文件系统',
+                updatedAt: timestamp
+            },
+            'todo-note': {
+                name: 'todo-note',
+                type: 'note',
+                title: '今日待办',
+                content: '1. 尝试在备忘录中编辑内容\n2. 在终端里输入 `help` 查看文件命令\n3. 在访达中双击文件试试\n4. 使用 Safari 打开示例页面',
+                updatedAt: timestamp - 1000
+            },
+            'readme.txt': {
+                name: 'readme.txt',
+                type: 'text',
+                title: '模拟器说明',
+                content: 'macOS Web 模拟器现在拥有一个轻量级的虚拟文件系统。\n\n• 访达显示所有文件并可快速打开\n• 终端支持查看、创建、删除和写入文件\n• 备忘录提供文本编辑并自动保存内容\n• Safari 可以浏览保存的页面或文本',
+                updatedAt: timestamp - 2000
+            },
+            'safari-tips.html': {
+                name: 'safari-tips.html',
+                type: 'page',
+                title: 'Safari 使用技巧',
+                content: '<h1>Safari 使用技巧</h1><p>这个页面存储在虚拟文件系统中，可以在 Safari 中打开。</p><ul><li>使用地址栏输入文件名，如 <code>safari-tips.html</code></li><li>也可以从下拉菜单中快速选择</li><li>终端命令 <code>open safari-tips.html</code> 会直接在 Safari 中打开</li></ul><p>通过简单的文件机制，你可以体验应用之间的互通。</p>',
+                updatedAt: timestamp - 3000
+            }
+        };
+    }
+
+    persistFileSystem() {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem('macos-files', JSON.stringify(this.fileSystem));
+    }
+
+    upsertFile(name, data) {
+        const existing = this.fileSystem[name] || { name };
+        this.fileSystem[name] = {
+            ...existing,
+            ...data,
+            name,
+            updatedAt: Date.now()
+        };
+        this.persistFileSystem();
+        this.refreshFileConsumers();
+        return this.fileSystem[name];
+    }
+
+    inferFileType(name, fallback = 'text') {
+        if (!name) return fallback;
+        const lower = name.toLowerCase();
+        if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'page';
+        if (lower.endsWith('.md') || lower.endsWith('.txt')) return 'text';
+        return fallback;
+    }
+
+    deleteFile(name) {
+        if (this.fileSystem[name]) {
+            delete this.fileSystem[name];
+            this.persistFileSystem();
+            this.refreshFileConsumers();
+            return true;
+        }
+        return false;
+    }
+
+    readFile(name) {
+        return this.fileSystem[name] || null;
+    }
+
+    listFiles(filterFn = null) {
+        const files = Object.values(this.fileSystem);
+        if (typeof filterFn === 'function') {
+            return files.filter(filterFn);
+        }
+        return files;
+    }
+
+    refreshFileConsumers() {
+        this.windows.forEach((window, appName) => {
+            if (appName === 'finder') {
+                this.renderFinderFiles(window);
+            } else if (appName === 'notes') {
+                if (this.notesContext?.renderList) {
+                    this.notesContext.renderList();
+                }
+            } else if (appName === 'browser') {
+                if (this.browserContext?.updateOptions) {
+                    this.browserContext.updateOptions();
+                } else {
+                    this.updateBrowserFileOptions(window);
+                }
+            }
+        });
     }
 
     initEventListeners() {
@@ -208,6 +334,10 @@ class MacOS {
                     }
                 });
             }
+        } else if (appName === 'finder') {
+            this.initFinder(window);
+        } else if (appName === 'notes') {
+            this.initNotes(window);
         } else if (appName === 'calculator') {
             const calcContent = window.querySelector('.calculator-content');
             if (calcContent) {
@@ -218,6 +348,8 @@ class MacOS {
             if (settingsContent) {
                 this.initSettings(settingsContent);
             }
+        } else if (appName === 'browser') {
+            this.initBrowser(window);
         }
     }
 
@@ -300,7 +432,16 @@ class MacOS {
         if (window) {
             window.remove();
             this.windows.delete(appName);
-            
+
+            if (appName === 'notes') {
+                this.notesContext = null;
+                this.currentNoteId = null;
+            }
+            if (appName === 'browser') {
+                this.browserContext = null;
+                this.pendingBrowserSource = null;
+            }
+
             // 更新 Dock
             const dockItem = document.querySelector(`.dock-item[data-app="${appName}"]`);
             if (dockItem) {
@@ -384,75 +525,163 @@ class MacOS {
                 <div class="finder-sidebar">
                     <div class="finder-section">
                         <div class="finder-section-title">个人收藏</div>
-                        <div class="finder-item active">
+                        <div class="finder-item active" data-finder-filter="all">
                             <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                            <span>最近使用</span>
+                            <span>所有文件</span>
                         </div>
-                        <div class="finder-item">
-                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                            <span>下载</span>
+                        <div class="finder-item" data-finder-filter="note">
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5a2 2 0 0 1 2-2h10l6 6v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                            <span>备忘录</span>
                         </div>
-                        <div class="finder-item">
-                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
-                            <span>文稿</span>
+                        <div class="finder-item" data-finder-filter="text">
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 0v5h5"/></svg>
+                            <span>文本</span>
                         </div>
-                        <div class="finder-item">
-                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                            <span>图片</span>
-                        </div>
-                    </div>
-                    <div class="finder-section">
-                        <div class="finder-section-title">iCloud</div>
-                        <div class="finder-item">
-                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
-                            <span>iCloud Drive</span>
-                        </div>
-                    </div>
-                    <div class="finder-section">
-                        <div class="finder-section-title">位置</div>
-                        <div class="finder-item">
-                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
-                            <span>我的 Mac</span>
+                        <div class="finder-item" data-finder-filter="page">
+                            <svg class="finder-item-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v12H5.17L4 17.17V4zm2 14h14v2H4v-3.17z"/></svg>
+                            <span>网页</span>
                         </div>
                     </div>
                 </div>
                 <div class="finder-main">
-                    <div class="finder-files">
-                        <div class="finder-file">
-                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><path d="M50 8H22l-8 8v36c0 2.2 1.8 4 4 4h32c2.2 0 4-1.8 4-4V12c0-2.2-1.8-4-4-4z" fill="#42A5F5"/><path d="M22 8l-8 8h6c1.1 0 2-.9 2-2V8z" fill="#1E88E5"/></svg>
-                            <div class="finder-file-name">文件夹</div>
+                    <div class="finder-toolbar">
+                        <div class="finder-path">我的文件</div>
+                        <div class="finder-actions">
+                            <button class="finder-refresh-button" data-finder-refresh>刷新</button>
                         </div>
-                        <div class="finder-file">
-                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="8" width="40" height="48" rx="4" fill="#fff"/><rect x="12" y="8" width="40" height="48" rx="4" fill="none" stroke="#90A4AE" stroke-width="2"/><line x1="18" y1="18" x2="46" y2="18" stroke="#90A4AE" stroke-width="2"/><line x1="18" y1="26" x2="46" y2="26" stroke="#90A4AE" stroke-width="2"/><line x1="18" y1="34" x2="38" y2="34" stroke="#90A4AE" stroke-width="2"/></svg>
-                            <div class="finder-file-name">文档.txt</div>
-                        </div>
-                        <div class="finder-file">
-                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="8" y="12" width="48" height="40" rx="4" fill="#66BB6A"/><circle cx="22" cy="28" r="6" fill="#FFF59D"/><path d="M8 42l12-12 8 8 16-16 12 12v8c0 2.2-1.8 4-4 4H12c-2.2 0-4-1.8-4-4v-0z" fill="#43A047"/></svg>
-                            <div class="finder-file-name">图片.png</div>
-                        </div>
-                        <div class="finder-file">
-                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="8" width="40" height="48" rx="4" fill="#EC407A"/><circle cx="32" cy="28" r="8" fill="white"/><path d="M26 32c0 3.3 2.7 6 6 6s6-2.7 6-6" stroke="white" stroke-width="2" fill="none"/></svg>
-                            <div class="finder-file-name">音乐.mp3</div>
-                        </div>
-                        <div class="finder-file">
-                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="8" width="40" height="48" rx="4" fill="#7E57C2"/><path d="M26 24l16 8-16 8V24z" fill="white"/></svg>
-                            <div class="finder-file-name">视频.mp4</div>
-                        </div>
-                        <div class="finder-file">
-                            <svg class="finder-file-icon" viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="12" width="40" height="40" rx="4" fill="#FF9800"/><path d="M20 24h24v4H20zm0 8h24v4H20zm0 8h16v4H20z" fill="white"/></svg>
-                            <div class="finder-file-name">压缩包.zip</div>
-                        </div>
+                    </div>
+                    <div class="finder-files" data-finder-files></div>
+                    <div class="finder-empty" data-finder-empty>
+                        <div>还没有文件，尝试在终端使用 <code>touch demo.txt</code> 创建一个，或者在备忘录中新建内容。</div>
                     </div>
                 </div>
             </div>
         `;
     }
 
+    initFinder(window) {
+        window.dataset.finderFilter = window.dataset.finderFilter || 'all';
+        const filterItems = window.querySelectorAll('[data-finder-filter]');
+        filterItems.forEach(item => {
+            item.addEventListener('click', () => {
+                filterItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                window.dataset.finderFilter = item.dataset.finderFilter;
+                this.renderFinderFiles(window);
+            });
+        });
+
+        const refreshButton = window.querySelector('[data-finder-refresh]');
+        refreshButton?.addEventListener('click', () => this.renderFinderFiles(window));
+
+        this.renderFinderFiles(window);
+    }
+
+    renderFinderFiles(window) {
+        const filesContainer = window.querySelector('[data-finder-files]');
+        const emptyState = window.querySelector('[data-finder-empty]');
+        if (!filesContainer) return;
+
+        const filter = window.dataset.finderFilter || 'all';
+        let files = this.listFiles();
+        if (filter !== 'all') {
+            files = files.filter(file => file.type === filter);
+        }
+
+        files.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+        filesContainer.innerHTML = '';
+        if (files.length === 0) {
+            if (emptyState) emptyState.style.display = 'flex';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        files.forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'finder-file';
+            item.dataset.fileName = file.name;
+            item.innerHTML = `
+                <div class="finder-file-icon">${this.getFinderIcon(file.type)}</div>
+                <div class="finder-file-info">
+                    <div class="finder-file-name">${file.title || file.name}</div>
+                    <div class="finder-file-meta">${file.name} · ${new Date(file.updatedAt || Date.now()).toLocaleString('zh-CN', { hour12: false })}</div>
+                    <div class="finder-file-preview">${this.getFilePreview(file)}</div>
+                </div>
+            `;
+
+            item.addEventListener('click', () => {
+                filesContainer.querySelectorAll('.finder-file').forEach(el => el.classList.remove('selected'));
+                item.classList.add('selected');
+            });
+
+            item.addEventListener('dblclick', () => {
+                this.openFileFromFinder(file);
+            });
+
+            filesContainer.appendChild(item);
+        });
+    }
+
+    getFinderIcon(type) {
+        switch (type) {
+            case 'note':
+                return '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="6" width="32" height="36" rx="6" fill="#FFF5CC"/><rect x="12" y="10" width="24" height="4" rx="2" fill="#FBC02D"/><rect x="12" y="18" width="20" height="4" rx="2" fill="#F57F17"/><rect x="12" y="26" width="20" height="4" rx="2" fill="#F57F17"/><rect x="12" y="34" width="12" height="4" rx="2" fill="#F57F17"/></svg>';
+            case 'page':
+                return '<svg viewBox="0 0 48 48" width="48" height="48"><path d="M12 4h18l10 10v24a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z" fill="#E3F2FD"/><path d="M30 4v12h12" fill="#BBDEFB"/><rect x="14" y="20" width="20" height="3" rx="1.5" fill="#1E88E5"/><rect x="14" y="27" width="16" height="3" rx="1.5" fill="#64B5F6"/><rect x="14" y="34" width="22" height="3" rx="1.5" fill="#90CAF9"/></svg>';
+            default:
+                return '<svg viewBox="0 0 48 48" width="48" height="48"><path d="M12 4h18l10 10v24a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z" fill="#ECEFF1"/><path d="M30 4v10a2 2 0 0 0 2 2h10" fill="#CFD8DC"/><rect x="16" y="22" width="16" height="2" rx="1" fill="#607D8B"/><rect x="16" y="28" width="12" height="2" rx="1" fill="#90A4AE"/><rect x="16" y="34" width="20" height="2" rx="1" fill="#B0BEC5"/></svg>';
+        }
+    }
+
+    getFilePreview(file) {
+        if (!file.content) return '（空文件）';
+        const text = String(file.content).replace(/<[^>]+>/g, ' ');
+        const firstLine = text.split(/\r?\n/).find(line => line.trim());
+        return firstLine ? firstLine.trim().slice(0, 60) : '（空文件）';
+    }
+
+    openFileFromFinder(file) {
+        if (!file) return;
+        this.openFileByName(file.name);
+    }
+
+    openFileByName(name) {
+        const file = this.readFile(name);
+        if (!file) {
+            return false;
+        }
+        if (file.type === 'page') {
+            if (this.windows.has('browser')) {
+                this.focusWindow('browser');
+                if (this.browserContext?.load) {
+                    this.browserContext.load(file.name);
+                    this.pendingBrowserSource = null;
+                } else {
+                    this.pendingBrowserSource = file.name;
+                }
+            } else {
+                this.pendingBrowserSource = file.name;
+                this.openApp('browser');
+            }
+        } else {
+            this.pendingNoteToOpen = file.name;
+            if (this.windows.has('notes')) {
+                this.focusWindow('notes');
+                this.notesContext?.renderList?.();
+            } else {
+                this.openApp('notes');
+            }
+        }
+        return true;
+    }
+
     createTerminalContent() {
         return `
             <div class="terminal-content" data-terminal="true">
                 <div class="terminal-line">Last login: ${new Date().toLocaleString('zh-CN')}</div>
-                <div class="terminal-line">macOS Web Simulator v1.0</div>
+                <div class="terminal-line">macOS Web Simulator v1.1</div>
                 <div class="terminal-line">&nbsp;</div>
                 <div class="terminal-input-line">
                     <span class="terminal-prompt">user@macos ~ % </span>
@@ -464,7 +693,7 @@ class MacOS {
 
     executeTerminalCommand(terminal, command) {
         const inputLine = terminal.querySelector('.terminal-input-line');
-        
+
         // 显示输入的命令
         const commandLine = document.createElement('div');
         commandLine.className = 'terminal-line';
@@ -477,37 +706,127 @@ class MacOS {
             return;
         }
 
-        // 执行命令
-        const output = document.createElement('div');
-        output.className = 'terminal-line';
-        
-        const commands = {
-            'help': '可用命令: help, clear, date, echo, ls, pwd, whoami, uname',
-            'clear': 'CLEAR',
-            'date': new Date().toLocaleString('zh-CN'),
-            'ls': 'Desktop  Documents  Downloads  Pictures  Music  Videos',
-            'pwd': '/Users/user',
-            'whoami': 'user',
-            'uname': 'Darwin MacOS 14.0'
+        const respond = (text) => {
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.textContent = text;
+            terminal.insertBefore(line, inputLine);
         };
 
-        if (command === 'clear') {
-            // 清空终端
+        const trimmed = command.trim();
+        const [baseCommand, ...rawArgs] = trimmed.split(/\s+/);
+        const args = rawArgs;
+
+        const commands = {
+            date: () => respond(new Date().toLocaleString('zh-CN')),
+            pwd: () => respond('/Users/user'),
+            whoami: () => respond('user'),
+            uname: () => respond('Darwin macOS Web 1.1')
+        };
+
+        if (trimmed === 'clear') {
             terminal.querySelectorAll('.terminal-line').forEach(line => line.remove());
-        } else if (command.startsWith('echo ')) {
-            output.textContent = command.substring(5);
-            terminal.insertBefore(output, inputLine);
-        } else if (commands[command]) {
-            output.textContent = commands[command];
-            terminal.insertBefore(output, inputLine);
-        } else if (command) {
-            output.textContent = `zsh: command not found: ${command}`;
-            terminal.insertBefore(output, inputLine);
+            terminal.scrollTop = terminal.scrollHeight;
+            return;
+        }
+
+        if (trimmed.startsWith('echo ')) {
+            respond(trimmed.substring(5));
+        } else if (baseCommand === 'help') {
+            [
+                '可用命令:',
+                '  help                显示当前帮助',
+                '  clear               清屏',
+                '  date                显示当前时间',
+                '  ls [type]           列出文件，可选过滤类型 note/text/page',
+                '  cat <文件名>        查看文件内容',
+                '  touch <文件名>      创建一个文本文件',
+                '  write <文件名> <内容> 写入文本内容',
+                '  rm <文件名>         删除文件',
+                '  open <文件名>       在对应应用中打开文件',
+                '  pwd / whoami / uname 与真实终端类似'
+            ].forEach(respond);
+        } else if (baseCommand === 'ls') {
+            const filter = args[0];
+            let files = this.listFiles();
+            if (filter && ['note', 'text', 'page'].includes(filter)) {
+                files = files.filter(file => file.type === filter);
+            }
+            if (!files.length) {
+                respond('（没有文件）');
+            } else {
+                respond(files.map(file => `${file.name}` + (file.type ? ` [${file.type}]` : '')).join('  '));
+            }
+        } else if (baseCommand === 'cat') {
+            const name = args[0];
+            if (!name) {
+                respond('用法: cat <文件名>');
+            } else {
+                const file = this.readFile(name);
+                if (!file) {
+                    respond(`未找到文件: ${name}`);
+                } else if (file.type === 'page') {
+                    respond('这是一个网页文件，请使用 open 命令在 Safari 中打开。');
+                } else {
+                    const content = file.content ? String(file.content) : '';
+                    content.split(/\r?\n/).forEach(line => respond(line));
+                    if (!content) {
+                        respond('（空文件）');
+                    }
+                }
+            }
+        } else if (baseCommand === 'touch') {
+            const name = args[0];
+            if (!name) {
+                respond('用法: touch <文件名>');
+            } else {
+                const existing = this.readFile(name);
+                this.upsertFile(name, {
+                    type: existing?.type || this.inferFileType(name),
+                    title: existing?.title || name,
+                    content: existing?.content || ''
+                });
+                respond(existing ? `已更新文件时间: ${name}` : `已创建文件: ${name}`);
+            }
+        } else if (baseCommand === 'write') {
+            const match = trimmed.match(/^write\s+(\S+)\s+([\s\S]+)$/);
+            if (!match) {
+                respond('用法: write <文件名> <内容>');
+            } else {
+                const [, name, content] = match;
+                const existing = this.readFile(name);
+                this.upsertFile(name, {
+                    type: existing?.type || this.inferFileType(name),
+                    title: existing?.title || name,
+                    content
+                });
+                respond(`已写入 ${name}`);
+            }
+        } else if (baseCommand === 'rm') {
+            const name = args[0];
+            if (!name) {
+                respond('用法: rm <文件名>');
+            } else {
+                respond(this.deleteFile(name) ? `已删除 ${name}` : `未找到文件: ${name}`);
+            }
+        } else if (baseCommand === 'open') {
+            const name = args[0];
+            if (!name) {
+                respond('用法: open <文件名>');
+            } else if (this.openFileByName(name)) {
+                respond(`正在打开 ${name} …`);
+            } else {
+                respond(`未找到文件: ${name}`);
+            }
+        } else if (commands[baseCommand]) {
+            commands[baseCommand]();
+        } else {
+            respond(`zsh: command not found: ${command}`);
         }
 
         // 滚动到底部
         terminal.scrollTop = terminal.scrollHeight;
-        
+
         // 重新聚焦输入框
         const input = terminal.querySelector('.terminal-input');
         if (input) input.focus();
@@ -517,33 +836,179 @@ class MacOS {
         return `
             <div class="notes-content">
                 <div class="notes-sidebar">
-                    <div class="notes-list-item active">
-                        <div class="notes-item-title">欢迎使用备忘录</div>
-                        <div class="notes-item-preview">这是一个macOS风格的备忘录应用...</div>
+                    <div class="notes-sidebar-header">
+                        <div class="notes-sidebar-title">备忘录</div>
+                        <button class="notes-new-button" data-notes-new title="新建备忘录">＋</button>
                     </div>
-                    <div class="notes-list-item">
-                        <div class="notes-item-title">待办事项</div>
-                        <div class="notes-item-preview">今天要完成的任务列表...</div>
-                    </div>
-                    <div class="notes-list-item">
-                        <div class="notes-item-title">想法记录</div>
-                        <div class="notes-item-preview">一些随机的想法和灵感...</div>
-                    </div>
+                    <div class="notes-list" data-notes-list></div>
+                    <div class="notes-empty" data-notes-empty>暂无备忘录，点击右上角的 ＋ 创建一个。</div>
                 </div>
                 <div class="notes-editor">
-                    <input type="text" class="notes-editor-title" placeholder="标题" value="欢迎使用备忘录" />
-                    <textarea class="notes-editor-content" placeholder="开始输入...">这是一个高度还原的macOS备忘录应用。
-
-你可以在这里记录：
-• 重要的想法和灵感
-• 待办事项列表
-• 会议笔记
-• 日常计划
-
-备忘录会自动保存你的所有内容。</textarea>
+                    <input type="text" class="notes-editor-title" placeholder="标题" data-note-title />
+                    <textarea class="notes-editor-content" placeholder="开始输入..." data-note-content></textarea>
+                    <div class="notes-status" data-note-status>选择一个备忘录开始编辑</div>
                 </div>
             </div>
         `;
+    }
+
+    initNotes(window) {
+        const listContainer = window.querySelector('[data-notes-list]');
+        const emptyState = window.querySelector('[data-notes-empty]');
+        const titleInput = window.querySelector('[data-note-title]');
+        const contentInput = window.querySelector('[data-note-content]');
+        const statusLabel = window.querySelector('[data-note-status]');
+        const newButton = window.querySelector('[data-notes-new]');
+
+        if (!listContainer || !titleInput || !contentInput) return;
+
+        let saveTimeout = null;
+        let applying = false;
+
+        applying = true;
+        titleInput.value = '';
+        contentInput.value = '';
+        titleInput.disabled = true;
+        contentInput.disabled = true;
+        statusLabel.textContent = '选择一个备忘录开始编辑';
+        applying = false;
+
+        const getNotes = () => this.listFiles(file => file.type === 'note' || file.type === 'text');
+
+        const updateEmptyState = () => {
+            const notes = getNotes();
+            if (emptyState) {
+                emptyState.style.display = notes.length === 0 ? 'block' : 'none';
+            }
+        };
+
+        const scheduleSave = () => {
+            if (!this.currentNoteId) return;
+            clearTimeout(saveTimeout);
+            if (statusLabel) {
+                statusLabel.textContent = '正在保存…';
+            }
+            saveTimeout = setTimeout(() => {
+                this.upsertFile(this.currentNoteId, {
+                    type: this.readFile(this.currentNoteId)?.type || 'note',
+                    title: titleInput.value.trim() || '未命名备忘录',
+                    content: contentInput.value
+                });
+                if (statusLabel) {
+                    statusLabel.textContent = '已保存';
+                }
+            }, 300);
+        };
+
+        const selectNote = (name) => {
+            const file = this.readFile(name);
+            if (!file) return;
+            this.currentNoteId = name;
+            applying = true;
+            titleInput.value = file.title || file.name;
+            contentInput.value = file.content || '';
+            titleInput.disabled = false;
+            contentInput.disabled = false;
+            if (statusLabel) {
+                statusLabel.textContent = '已载入';
+            }
+            listContainer.querySelectorAll('.notes-list-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.noteName === name);
+            });
+            applying = false;
+        };
+
+        const renderList = () => {
+            const notes = getNotes();
+            updateEmptyState();
+            listContainer.innerHTML = '';
+
+            notes.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+            notes.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'notes-list-item';
+                item.dataset.noteName = file.name;
+                item.innerHTML = `
+                    <div class="notes-item-title">${file.title || file.name}</div>
+                    <div class="notes-item-preview">${this.getFilePreview(file)}</div>
+                `;
+                item.addEventListener('click', () => selectNote(file.name));
+                if (file.name === this.currentNoteId) {
+                    item.classList.add('active');
+                }
+                listContainer.appendChild(item);
+            });
+
+            if (!this.currentNoteId && notes.length) {
+                selectNote(notes[0].name);
+            } else if (!notes.length) {
+                applying = true;
+                this.currentNoteId = null;
+                titleInput.value = '';
+                contentInput.value = '';
+                titleInput.disabled = true;
+                contentInput.disabled = true;
+                if (statusLabel) {
+                    statusLabel.textContent = '暂无备忘录';
+                }
+                applying = false;
+            }
+        };
+
+        titleInput.addEventListener('input', () => {
+            if (applying) return;
+            scheduleSave();
+        });
+
+        contentInput.addEventListener('input', () => {
+            if (applying) return;
+            scheduleSave();
+        });
+
+        if (newButton) {
+            newButton.addEventListener('click', () => {
+                const fileName = this.createNoteFile();
+                renderList();
+                selectNote(fileName);
+                titleInput.focus();
+            });
+        }
+
+        this.notesContext = {
+            renderList: () => {
+                const previous = this.currentNoteId;
+                renderList();
+                if (this.pendingNoteToOpen) {
+                    selectNote(this.pendingNoteToOpen);
+                    this.pendingNoteToOpen = null;
+                } else if (previous) {
+                    selectNote(previous);
+                }
+            }
+        };
+
+        renderList();
+
+        if (this.pendingNoteToOpen) {
+            selectNote(this.pendingNoteToOpen);
+            this.pendingNoteToOpen = null;
+        }
+    }
+
+    createNoteFile() {
+        let index = 1;
+        let name = `note-${index}`;
+        while (this.fileSystem[name]) {
+            index += 1;
+            name = `note-${index}`;
+        }
+        this.upsertFile(name, {
+            type: 'note',
+            title: `新备忘录 ${index}`,
+            content: ''
+        });
+        return name;
     }
 
     createCalculatorContent() {
@@ -818,30 +1283,159 @@ class MacOS {
             <div class="browser-content">
                 <div class="browser-toolbar">
                     <div class="browser-nav-buttons">
-                        <button class="browser-nav-button">←</button>
-                        <button class="browser-nav-button">→</button>
+                        <button class="browser-nav-button" data-browser-back title="后退">←</button>
+                        <button class="browser-nav-button" data-browser-forward title="前进">→</button>
                     </div>
                     <div class="browser-address-bar">
-                        <input type="text" class="browser-address-input" value="https://www.apple.com" readonly />
+                        <input type="text" class="browser-address-input" placeholder="输入网址或文件名，如 safari-tips.html" />
+                        <button class="browser-go-button" data-browser-go>前往</button>
+                        <select class="browser-file-select" data-browser-file>
+                            <option value="">打开文件…</option>
+                        </select>
                     </div>
                 </div>
                 <div class="browser-viewport">
-                    <div class="browser-page">
-                        <h1>欢迎使用 Safari</h1>
-                        <p>Safari 是由 Apple 开发的快速、高效且极具安全性的浏览器。</p>
-                        <p>它专为 Mac、iPhone 和 iPad 而设计，提供业界领先的隐私保护功能。</p>
-                        <p>享受流畅的浏览体验，同时保护您的在线隐私。</p>
-                        <br />
-                        <h2>主要特性</h2>
-                        <p>• 智能防跟踪技术</p>
-                        <p>• 内置密码管理器</p>
-                        <p>• 快速而高效的性能</p>
-                        <p>• 与所有 Apple 设备无缝协作</p>
-                        <p>• 节能技术延长电池续航</p>
-                    </div>
+                    <div class="browser-page" data-browser-page></div>
                 </div>
             </div>
         `;
+    }
+
+    initBrowser(window) {
+        const backButton = window.querySelector('[data-browser-back]');
+        const forwardButton = window.querySelector('[data-browser-forward]');
+        const goButton = window.querySelector('[data-browser-go]');
+        const addressInput = window.querySelector('.browser-address-input');
+        const pageContainer = window.querySelector('[data-browser-page]');
+        const fileSelect = window.querySelector('[data-browser-file]');
+
+        if (!addressInput || !pageContainer) return;
+
+        this.browserHistory = { entries: [], index: -1 };
+
+        const updateNavButtons = () => {
+            if (backButton) {
+                backButton.disabled = this.browserHistory.index <= 0;
+            }
+            if (forwardButton) {
+                forwardButton.disabled = this.browserHistory.index >= this.browserHistory.entries.length - 1;
+            }
+        };
+
+        const renderContent = (html, sourceLabel) => {
+            pageContainer.innerHTML = html;
+            if (sourceLabel) {
+                addressInput.value = sourceLabel;
+            }
+        };
+
+        const loadSource = (source, pushHistory = true) => {
+            if (!source) {
+                renderContent('<div class="browser-welcome"><h1>欢迎使用 Safari</h1><p>输入网址或选择文件以开始浏览。</p></div>');
+                if (fileSelect) fileSelect.value = '';
+                return;
+            }
+
+            const trimmed = source.trim();
+            const file = this.readFile(trimmed);
+
+            if (file) {
+                if (file.type === 'page') {
+                    renderContent(file.content || '<p>该网页没有内容。</p>', file.name);
+                } else {
+                    const text = (file.content || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    renderContent(`<pre class="browser-text-viewer">${text}</pre>`, file.name);
+                }
+            } else if (/^https?:\/\//i.test(trimmed)) {
+                renderContent(`<div class="browser-placeholder"><h2>离线模式</h2><p>当前模拟器不支持直接访问互联网。您可以将需要的网页保存为文件后在此查看。</p><p>尝试打开文件: <code>safari-tips.html</code></p></div>`, trimmed);
+            } else {
+                renderContent(`<div class="browser-placeholder"><h2>未找到资源</h2><p>找不到名为 <strong>${trimmed}</strong> 的文件。</p><p>可使用终端命令 <code>write ${trimmed} 内容</code> 创建一个文本文件。</p></div>`, trimmed);
+            }
+
+            if (fileSelect) {
+                const hasOption = Array.from(fileSelect.options).some(option => option.value === trimmed);
+                fileSelect.value = hasOption ? trimmed : '';
+            }
+
+            if (pushHistory) {
+                this.browserHistory.entries = this.browserHistory.entries.slice(0, this.browserHistory.index + 1);
+                this.browserHistory.entries.push(trimmed);
+                this.browserHistory.index = this.browserHistory.entries.length - 1;
+            }
+
+            updateNavButtons();
+        };
+
+        backButton?.addEventListener('click', () => {
+            if (this.browserHistory.index > 0) {
+                this.browserHistory.index -= 1;
+                const target = this.browserHistory.entries[this.browserHistory.index];
+                loadSource(target, false);
+            }
+        });
+
+        forwardButton?.addEventListener('click', () => {
+            if (this.browserHistory.index < this.browserHistory.entries.length - 1) {
+                this.browserHistory.index += 1;
+                const target = this.browserHistory.entries[this.browserHistory.index];
+                loadSource(target, false);
+            }
+        });
+
+        goButton?.addEventListener('click', () => {
+            loadSource(addressInput.value, true);
+        });
+
+        addressInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loadSource(addressInput.value, true);
+            }
+        });
+
+        fileSelect?.addEventListener('change', () => {
+            if (fileSelect.value) {
+                loadSource(fileSelect.value, true);
+            }
+        });
+
+        this.updateBrowserFileOptions(window);
+
+        if (this.pendingBrowserSource) {
+            loadSource(this.pendingBrowserSource, true);
+            this.pendingBrowserSource = null;
+        } else {
+            loadSource('', false);
+        }
+
+        updateNavButtons();
+
+        this.browserContext = {
+            window,
+            load: (source) => loadSource(source, true),
+            updateOptions: () => this.updateBrowserFileOptions(window)
+        };
+    }
+
+    updateBrowserFileOptions(window) {
+        const select = window.querySelector('[data-browser-file]');
+        if (!select) return;
+
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">打开文件…</option>';
+        const files = this.listFiles(file => ['page', 'note', 'text'].includes(file.type));
+        files.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+        files.forEach(file => {
+            const option = document.createElement('option');
+            option.value = file.name;
+            option.textContent = `${file.title || file.name} (${file.type})`;
+            select.appendChild(option);
+        });
+        if (currentValue && Array.from(select.options).some(option => option.value === currentValue)) {
+            select.value = currentValue;
+        } else {
+            select.value = '';
+        }
     }
 }
 
