@@ -69,7 +69,7 @@ class MacOS {
 
         if (wallpapers[this.wallpaper]) {
             wallpaperEl.style.backgroundImage = wallpapers[this.wallpaper];
-        } else if (this.wallpaper.startsWith('http')) {
+        } else if (typeof this.wallpaper === 'string' && this.wallpaper.startsWith('http')) {
             wallpaperEl.style.backgroundImage = `url('${this.wallpaper}'), linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
         } else {
             wallpaperEl.style.backgroundImage = wallpapers['gradient1'];
@@ -1127,8 +1127,9 @@ class MacOS {
                     currentValue = String(parseFloat(currentValue) / 100);
                     display.textContent = currentValue;
                 } else if (['+', '−', '×', '÷'].includes(value)) {
-                    // 如果已有待处理的运算,先完成它
-                    if (previousValue !== null && operation !== null) {
+                    // 只有在用户已输入第二个操作数后才执行待处理的运算
+                    // 这样允许用户在输入第二个数字前切换运算符
+                    if (previousValue !== null && operation !== null && !shouldResetDisplay) {
                         const result = this.calculate(previousValue, currentValue, operation);
                         if (result === 'Error') {
                             display.textContent = result;
