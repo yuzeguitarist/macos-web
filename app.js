@@ -12,6 +12,7 @@ class MacOS {
         this.browserHistory = { entries: [], index: -1 };
         this.notesContext = null;
         this.browserContext = null;
+        this.wallpaper = this.loadWallpaper();
         this.init();
     }
 
@@ -28,7 +29,51 @@ class MacOS {
             this.initEventListeners();
             this.updateTime();
             setInterval(() => this.updateTime(), 1000);
+            this.applyWallpaper();
         }, 4000);
+    }
+
+    loadWallpaper() {
+        if (typeof localStorage === 'undefined') {
+            return this.getDefaultWallpaper();
+        }
+        const stored = localStorage.getItem('macos-wallpaper');
+        return stored || this.getDefaultWallpaper();
+    }
+
+    getDefaultWallpaper() {
+        return 'gradient1'; // 默认渐变壁纸
+    }
+
+    setWallpaper(wallpaperType, customUrl = null) {
+        this.wallpaper = customUrl || wallpaperType;
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('macos-wallpaper', this.wallpaper);
+        }
+        this.applyWallpaper();
+    }
+
+    applyWallpaper() {
+        const wallpaperEl = document.querySelector('.desktop-wallpaper');
+        if (!wallpaperEl) return;
+
+        const wallpapers = {
+            'gradient1': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            'gradient2': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            'gradient3': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            'gradient4': 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+            'gradient5': 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+            'solid-dark': 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            'solid-light': 'linear-gradient(135deg, #e3e3e3 0%, #c9c9c9 100%)',
+        };
+
+        if (wallpapers[this.wallpaper]) {
+            wallpaperEl.style.backgroundImage = wallpapers[this.wallpaper];
+        } else if (this.wallpaper.startsWith('http')) {
+            wallpaperEl.style.backgroundImage = `url('${this.wallpaper}'), linear-gradient(135deg, #667eea 0%, #764ba2 100%)`;
+        } else {
+            wallpaperEl.style.backgroundImage = wallpapers['gradient1'];
+        }
     }
 
     loadFileSystem() {
@@ -183,23 +228,17 @@ class MacOS {
 
     updateTime() {
         const now = new Date();
-        const options = { 
-            weekday: 'short', 
-            month: 'long', 
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: false
-        };
-        const timeStr = now.toLocaleString('zh-CN', options)
-            .replace(/星期/, '周')
-            .replace(/(\d+)月/, '$1月')
-            .replace(/(\d+)日/, '$1日');
-        
+        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const weekday = weekdays[now.getDay()];
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
         const hour = now.getHours();
+        const minute = now.getMinutes().toString().padStart(2, '0');
         const period = hour < 12 ? '上午' : '下午';
+        const displayHour = hour;
         
-        document.getElementById('menuTime').textContent = timeStr.split(' ').slice(0, 2).join(' ') + ' ' + period + timeStr.split(' ').slice(2).join('');
+        const timeStr = `${weekday} ${month}月${day}日 ${period}${displayHour}:${minute}`;
+        document.getElementById('menuTime').textContent = timeStr;
     }
 
     openApp(appName) {
@@ -440,6 +479,8 @@ class MacOS {
             if (appName === 'browser') {
                 this.browserContext = null;
                 this.pendingBrowserSource = null;
+                // 清理浏览器历史记录，避免内存泄漏
+                this.browserHistory = { entries: [], index: -1 };
             }
 
             // 更新 Dock
@@ -1086,7 +1127,8 @@ class MacOS {
                     currentValue = String(parseFloat(currentValue) / 100);
                     display.textContent = currentValue;
                 } else if (['+', '−', '×', '÷'].includes(value)) {
-                    if (previousValue !== null && operation !== null && !shouldResetDisplay) {
+                    // 如果已有待处理的运算,先完成它
+                    if (previousValue !== null && operation !== null) {
                         const result = this.calculate(previousValue, currentValue, operation);
                         if (result === 'Error') {
                             display.textContent = result;
@@ -1152,14 +1194,20 @@ class MacOS {
         return `
             <div class="settings-content">
                 <div class="settings-sidebar">
-                    <div class="settings-item active" data-category="general">
+                    <div class="settings-item" data-category="general">
                         <div class="settings-item-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
                         </div>
                         <div class="settings-item-label">通用</div>
                     </div>
-                    <div class="settings-item" data-category="appearance">
+                    <div class="settings-item active" data-category="wallpaper">
                         <div class="settings-item-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM5 17l3.5-4.5 2.5 3.01L14.5 11l4.5 6H5z"/></svg>
+                        </div>
+                        <div class="settings-item-label">壁纸</div>
+                    </div>
+                    <div class="settings-item" data-category="appearance">
+                        <div class="settings-item-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
                         </div>
                         <div class="settings-item-label">外观</div>
@@ -1190,7 +1238,50 @@ class MacOS {
                     </div>
                 </div>
                 <div class="settings-main" id="settingsMain">
-                    <div class="settings-section">
+                    <div class="settings-section" data-settings-panel="wallpaper">
+                        <div class="settings-section-title">桌面壁纸</div>
+                        <div class="wallpaper-grid">
+                            <div class="wallpaper-option" data-wallpaper="gradient1">
+                                <div class="wallpaper-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                <div class="wallpaper-name">紫色渐变</div>
+                            </div>
+                            <div class="wallpaper-option" data-wallpaper="gradient2">
+                                <div class="wallpaper-preview" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+                                <div class="wallpaper-name">粉红渐变</div>
+                            </div>
+                            <div class="wallpaper-option" data-wallpaper="gradient3">
+                                <div class="wallpaper-preview" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                                <div class="wallpaper-name">蓝色渐变</div>
+                            </div>
+                            <div class="wallpaper-option" data-wallpaper="gradient4">
+                                <div class="wallpaper-preview" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div>
+                                <div class="wallpaper-name">绿色渐变</div>
+                            </div>
+                            <div class="wallpaper-option" data-wallpaper="gradient5">
+                                <div class="wallpaper-preview" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"></div>
+                                <div class="wallpaper-name">暖色渐变</div>
+                            </div>
+                            <div class="wallpaper-option" data-wallpaper="solid-dark">
+                                <div class="wallpaper-preview" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);"></div>
+                                <div class="wallpaper-name">深色</div>
+                            </div>
+                            <div class="wallpaper-option" data-wallpaper="solid-light">
+                                <div class="wallpaper-preview" style="background: linear-gradient(135deg, #e3e3e3 0%, #c9c9c9 100%);"></div>
+                                <div class="wallpaper-name">浅色</div>
+                            </div>
+                        </div>
+                        <div class="settings-option" style="margin-top: 20px;">
+                            <div class="settings-option-info">
+                                <div class="settings-option-label">自定义壁纸URL</div>
+                                <div class="settings-option-desc">输入图片URL地址</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <input type="text" class="wallpaper-url-input" placeholder="https://example.com/image.jpg" />
+                            <button class="wallpaper-apply-button">应用</button>
+                        </div>
+                    </div>
+                    <div class="settings-section" data-settings-panel="general" style="display: none;">
                         <div class="settings-section-title">通用设置</div>
                         <div class="settings-option">
                             <div class="settings-option-info">
@@ -1261,20 +1352,56 @@ class MacOS {
             toggle.addEventListener('click', () => {
                 toggle.classList.toggle('active');
                 const setting = toggle.dataset.setting;
-                // 这里可以添加实际的设置功能
                 console.log(`Setting ${setting} toggled:`, toggle.classList.contains('active'));
             });
         });
 
         const sidebarItems = container.querySelectorAll('.settings-item');
+        const panels = container.querySelectorAll('[data-settings-panel]');
+        
         sidebarItems.forEach(item => {
             item.addEventListener('click', () => {
                 sidebarItems.forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 const category = item.dataset.category;
-                // 可以根据类别切换不同的设置面板
-                console.log(`Settings category changed to: ${category}`);
+                
+                // 切换面板
+                panels.forEach(panel => {
+                    panel.style.display = panel.dataset.settingsPanel === category ? 'block' : 'none';
+                });
             });
+        });
+
+        // 壁纸选择
+        const wallpaperOptions = container.querySelectorAll('.wallpaper-option');
+        wallpaperOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                wallpaperOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                const wallpaperType = option.dataset.wallpaper;
+                this.setWallpaper(wallpaperType);
+            });
+        });
+
+        // 自定义壁纸URL
+        const urlInput = container.querySelector('.wallpaper-url-input');
+        const applyButton = container.querySelector('.wallpaper-apply-button');
+        if (applyButton && urlInput) {
+            applyButton.addEventListener('click', () => {
+                const url = urlInput.value.trim();
+                if (url) {
+                    this.setWallpaper(null, url);
+                    wallpaperOptions.forEach(opt => opt.classList.remove('selected'));
+                }
+            });
+        }
+
+        // 标记当前选中的壁纸
+        const currentWallpaper = this.wallpaper;
+        wallpaperOptions.forEach(option => {
+            if (option.dataset.wallpaper === currentWallpaper) {
+                option.classList.add('selected');
+            }
         });
     }
 
