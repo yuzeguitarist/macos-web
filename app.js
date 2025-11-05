@@ -286,8 +286,8 @@ class MacOS {
             },
             calculator: {
                 title: '计算器',
-                width: 340,
-                height: 560,
+                width: 360,
+                height: 600,
                 content: this.createCalculatorContent()
             },
             settings: {
