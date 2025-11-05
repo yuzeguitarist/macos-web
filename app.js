@@ -1057,29 +1057,29 @@ class MacOS {
             <div class="calculator-content">
                 <div class="calculator-display">0</div>
                 <div class="calculator-buttons">
-                    <button class="calculator-button function">AC</button>
-                    <button class="calculator-button function">±</button>
-                    <button class="calculator-button function">%</button>
-                    <button class="calculator-button operator">÷</button>
-                    
-                    <button class="calculator-button">7</button>
-                    <button class="calculator-button">8</button>
-                    <button class="calculator-button">9</button>
-                    <button class="calculator-button operator">×</button>
-                    
-                    <button class="calculator-button">4</button>
-                    <button class="calculator-button">5</button>
-                    <button class="calculator-button">6</button>
-                    <button class="calculator-button operator">−</button>
-                    
-                    <button class="calculator-button">1</button>
-                    <button class="calculator-button">2</button>
-                    <button class="calculator-button">3</button>
-                    <button class="calculator-button operator">+</button>
-                    
-                    <button class="calculator-button zero">0</button>
-                    <button class="calculator-button">.</button>
-                    <button class="calculator-button operator">=</button>
+                    <button class="calculator-button function"><span>AC</span></button>
+                    <button class="calculator-button function"><span>±</span></button>
+                    <button class="calculator-button function"><span>%</span></button>
+                    <button class="calculator-button operator"><span>÷</span></button>
+
+                    <button class="calculator-button"><span>7</span></button>
+                    <button class="calculator-button"><span>8</span></button>
+                    <button class="calculator-button"><span>9</span></button>
+                    <button class="calculator-button operator"><span>×</span></button>
+
+                    <button class="calculator-button"><span>4</span></button>
+                    <button class="calculator-button"><span>5</span></button>
+                    <button class="calculator-button"><span>6</span></button>
+                    <button class="calculator-button operator"><span>−</span></button>
+
+                    <button class="calculator-button"><span>1</span></button>
+                    <button class="calculator-button"><span>2</span></button>
+                    <button class="calculator-button"><span>3</span></button>
+                    <button class="calculator-button operator"><span>+</span></button>
+
+                    <button class="calculator-button zero"><span>0</span></button>
+                    <button class="calculator-button"><span>.</span></button>
+                    <button class="calculator-button operator"><span>=</span></button>
                 </div>
             </div>
         `;
