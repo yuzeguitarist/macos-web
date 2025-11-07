@@ -221,7 +221,7 @@ class MacOS {
                 if (this.browserContext?.updateOptions) {
                     this.browserContext.updateOptions();
                 } else {
-                    this.updateBrowserFileOptions(window);
+                    this.updateBrowserFileOptions(windowEl);
                 }
             }
         });
