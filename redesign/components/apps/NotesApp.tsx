@@ -22,7 +22,20 @@ export function NotesApp() {
 
   // Only load note content when switching notes, not when store updates
   useEffect(() => {
-    if (selectedNote && !isEditingRef.current) {
+    // Clear any pending timers when switching notes
+    if (contentTimerRef.current) {
+      clearTimeout(contentTimerRef.current)
+      contentTimerRef.current = null
+    }
+    if (titleTimerRef.current) {
+      clearTimeout(titleTimerRef.current)
+      titleTimerRef.current = null
+    }
+
+    // Reset editing flag and load the new note
+    isEditingRef.current = false
+
+    if (selectedNote) {
       const note = notes.find((n) => n.name === selectedNote)
       if (note) {
         setTitle(note.title)

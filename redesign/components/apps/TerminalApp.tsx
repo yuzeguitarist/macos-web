@@ -144,17 +144,46 @@ Sample content for demonstration purposes.`
       case "history":
         output = history.map((cmd, i) => `  ${i + 1}  ${cmd}`).join("\n")
         break
-      case "cal":
+      case "cal": {
         const now = new Date()
-        output = `     ${now.toLocaleString('zh-CN', { month: 'long', year: 'numeric' })}
-日 一 二 三 四 五 六
-                1  2  3
- 4  5  6  7  8  9 10
-11 12 13 14 15 16 17
-18 19 20 21 22 23 24
-25 26 27 28 29 30 31`
+        const year = now.getFullYear()
+        const month = now.getMonth()
+        const today = now.getDate()
+
+        // Get first day of month and total days
+        const firstDay = new Date(year, month, 1).getDay()
+        const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+        // Build calendar header
+        const monthName = now.toLocaleString('zh-CN', { month: 'long', year: 'numeric' })
+        let cal = `     ${monthName}\n日 一 二 三 四 五 六\n`
+
+        // Add leading spaces
+        let line = ''
+        for (let i = 0; i < firstDay; i++) {
+          line += '   '
+        }
+
+        // Add days
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayStr = day.toString().padStart(2, ' ')
+          line += dayStr + ' '
+
+          if ((firstDay + day) % 7 === 0) {
+            cal += line + '\n'
+            line = ''
+          }
+        }
+
+        // Add remaining days
+        if (line) {
+          cal += line
+        }
+
+        output = cal
         break
-      case "tree":
+      }
+      case "tree": {
         output = `.
 ├── Documents
 │   ├── work
@@ -168,6 +197,7 @@ Sample content for demonstration purposes.`
 └── Music
     └── library`
         break
+      }
       case "ps":
         output = `  PID TTY           TIME CMD
   501 ttys000    0:00.12 -zsh

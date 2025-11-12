@@ -179,33 +179,22 @@ export function BrowserApp() {
                 </div>
               )}
 
-              {/* Quick Links */}
-              <div className="mt-12">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  快捷链接
-                </h2>
-                <div className="grid grid-cols-4 gap-4">
-                  {[
-                    { name: "示例网页", url: "demo-html" },
-                    { name: "新建网页", url: "create-html" },
-                    { name: "文档", url: "docs" },
-                    { name: "设置", url: "settings" },
-                  ].map((site) => (
-                    <button
-                      key={site.name}
-                      onClick={() => handleQuickLink(site)}
-                      className="p-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors group"
-                    >
-                      <div className="w-12 h-12 mx-auto mb-2 bg-white rounded-lg flex items-center justify-center shadow-sm group-hover:shadow">
-                        <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-500 rounded" />
-                      </div>
-                      <div className="text-[13px] font-medium text-gray-700">
-                        {site.name}
-                      </div>
-                    </button>
-                  ))}
+              {/* Quick Links - Only show if we have a demo HTML file */}
+              {htmlFiles.length === 0 && (
+                <div className="mt-12">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    开始创建
+                  </h2>
+                  <div className="max-w-md mx-auto p-8 rounded-xl bg-gray-50">
+                    <p className="text-gray-600 text-center mb-4">
+                      打开备忘录应用，创建你的第一个 HTML 文件，然后在这里访问它。
+                    </p>
+                    <div className="text-[13px] text-gray-500 text-center">
+                      点击备忘录中的 + 按钮 → 选择 HTML
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Features */}
               <div className="grid grid-cols-3 gap-6 mt-16 text-left">
