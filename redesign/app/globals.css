@@ -1,0 +1,287 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    /* 低饱和淡蓝 - Apple 风格 */
+    --primary: 210 15% 65%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 20% 92%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    /* 低饱和淡蓝环 */
+    --ring: 210 20% 70%;
+    --radius: 0.75rem;
+
+    /* macOS specific variables */
+    --macos-gray: 146 5% 85%;
+    --macos-sidebar: 220 13% 95%;
+    --macos-toolbar: 0 0% 98%;
+    /* 液态玻璃光影 */
+    --glass-tint: 210 25% 98%;
+    --glass-shadow: 210 15% 60%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    /* macOS dark mode specific */
+    --macos-gray: 220 7% 20%;
+    --macos-sidebar: 220 13% 15%;
+    --macos-toolbar: 220 13% 18%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'liga' 1, 'calt' 1;
+    letter-spacing: -0.011em;
+  }
+}
+
+@layer utilities {
+  /* 液态磨砂玻璃效果 - Apple 风格 */
+  .glass-light {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.7),
+      rgba(255, 255, 255, 0.5)
+    );
+    backdrop-filter: blur(32px) saturate(180%);
+    box-shadow:
+      0 8px 32px 0 rgba(31, 38, 135, 0.05),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .glass-medium {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0.3)
+    );
+    backdrop-filter: blur(40px) saturate(200%) brightness(110%);
+    box-shadow:
+      0 8px 32px 0 rgba(31, 38, 135, 0.08),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .glass-heavy {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.25),
+      rgba(255, 255, 255, 0.15)
+    );
+    backdrop-filter: blur(64px) saturate(200%) brightness(105%);
+    box-shadow:
+      0 8px 32px 0 rgba(31, 38, 135, 0.1),
+      inset 0 0.5px 0 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .glass-dark {
+    background: linear-gradient(
+      135deg,
+      rgba(0, 0, 0, 0.3),
+      rgba(0, 0, 0, 0.2)
+    );
+    backdrop-filter: blur(24px) saturate(150%);
+    box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  /* macOS 窗口 vibrancy - 液态玻璃 */
+  .vibrancy-light {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.85),
+      rgba(248, 250, 252, 0.75)
+    );
+    backdrop-filter: blur(40px) saturate(180%) brightness(105%);
+    box-shadow:
+      0 20px 60px 0 rgba(31, 38, 135, 0.08),
+      0 0 0 0.5px rgba(255, 255, 255, 0.5),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 0 20px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .vibrancy-medium {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.75),
+      rgba(248, 250, 252, 0.65)
+    );
+    backdrop-filter: blur(64px) saturate(200%) brightness(110%);
+    box-shadow:
+      0 24px 80px 0 rgba(31, 38, 135, 0.1),
+      inset 0 1px 2px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .vibrancy-sidebar {
+    background: linear-gradient(
+      135deg,
+      rgba(249, 250, 251, 0.92),
+      rgba(243, 244, 246, 0.88)
+    );
+    backdrop-filter: blur(40px) saturate(180%) brightness(102%);
+    box-shadow:
+      inset 0 0 0 0.5px rgba(0, 0, 0, 0.05),
+      inset 0 1px 2px 0 rgba(255, 255, 255, 0.6),
+      inset 0 0 30px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .vibrancy-toolbar {
+    background: linear-gradient(
+      180deg,
+      rgba(252, 252, 253, 0.96),
+      rgba(249, 250, 251, 0.94)
+    );
+    backdrop-filter: blur(32px) saturate(160%) brightness(103%);
+    box-shadow:
+      inset 0 -0.5px 0 0 rgba(0, 0, 0, 0.08),
+      inset 0 0.5px 0 0 rgba(255, 255, 255, 0.8),
+      inset 0 0 15px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  /* Dark mode glass */
+  .dark .glass-light {
+    @apply bg-gray-900/60 backdrop-blur-xl;
+  }
+
+  .dark .glass-medium {
+    @apply bg-gray-900/40 backdrop-blur-2xl;
+  }
+
+  .dark .glass-heavy {
+    @apply bg-gray-900/30 backdrop-blur-3xl;
+  }
+
+  .dark .vibrancy-light {
+    @apply bg-gray-900/80 backdrop-blur-2xl backdrop-saturate-150;
+  }
+
+  .dark .vibrancy-medium {
+    @apply bg-gray-900/70 backdrop-blur-3xl backdrop-saturate-200;
+  }
+
+  .dark .vibrancy-sidebar {
+    @apply bg-gray-800/90 backdrop-blur-2xl backdrop-saturate-150;
+  }
+
+  .dark .vibrancy-toolbar {
+    @apply bg-gray-800/95 backdrop-blur-xl backdrop-saturate-150;
+  }
+
+  /* macOS text styles */
+  .text-macos-title {
+    @apply text-[13px] font-medium tracking-[-0.01em];
+  }
+
+  .text-macos-body {
+    @apply text-[13px] font-normal;
+  }
+
+  .text-macos-caption {
+    @apply text-[11px] font-normal text-gray-600 dark:text-gray-400;
+  }
+
+  /* macOS buttons */
+  .btn-macos {
+    @apply rounded-md px-4 py-1.5 text-[13px] font-medium transition-all duration-150;
+    @apply bg-gradient-to-b from-white to-gray-50 hover:from-gray-50 hover:to-gray-100;
+    @apply border border-gray-300/50 shadow-sm hover:shadow;
+  }
+
+  .btn-macos-primary {
+    @apply rounded-md px-4 py-1.5 text-[13px] font-medium transition-all duration-150;
+    @apply bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500;
+    @apply text-white border-0 shadow-md hover:shadow-lg;
+  }
+
+  /* Smooth transitions */
+  .transition-macos {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  /* Traffic light buttons */
+  .traffic-light {
+    @apply w-3 h-3 rounded-full transition-all duration-150;
+  }
+}
+
+/* Scrollbar styling - macOS style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(0, 122, 255, 0.3);
+}
+
+/* Prevent text selection on UI elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
