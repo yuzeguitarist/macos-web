@@ -4,7 +4,7 @@ import { FileSystemItem } from "@/lib/types"
 interface FileSystemStore {
   files: FileSystemItem[]
   addFile: (file: FileSystemItem) => void
-  updateFile: (name: string, content: string) => void
+  updateFile: (name: string, updates: Partial<Pick<FileSystemItem, 'content' | 'title'>>) => void
   deleteFile: (name: string) => void
   getFile: (name: string) => FileSystemItem | undefined
 }
@@ -59,11 +59,11 @@ export const useFileSystemStore = create<FileSystemStore>((set, get) => ({
     }))
   },
 
-  updateFile: (name, content) => {
+  updateFile: (name, updates) => {
     set((state) => ({
       files: state.files.map((f) =>
         f.name === name
-          ? { ...f, content, modifiedAt: new Date() }
+          ? { ...f, ...updates, modifiedAt: new Date() }
           : f
       ),
     }))

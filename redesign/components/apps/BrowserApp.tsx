@@ -2,15 +2,49 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, RotateCw, Home, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, RotateCw, Home, Search, Globe, Shield, Zap, Battery } from "lucide-react"
 
 export function BrowserApp() {
-  const [url, setUrl] = useState("www.apple.com")
-  const [canGoBack, setCanGoBack] = useState(false)
-  const [canGoForward, setCanGoForward] = useState(false)
+  const [history, setHistory] = useState<string[]>(["www.apple.com"])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [inputUrl, setInputUrl] = useState("www.apple.com")
+
+  const url = history[currentIndex]
+  const canGoBack = currentIndex > 0
+  const canGoForward = currentIndex < history.length - 1
 
   const handleNavigate = (newUrl: string) => {
-    setUrl(newUrl)
+    // 截断forward历史并添加新URL
+    const newHistory = history.slice(0, currentIndex + 1)
+    newHistory.push(newUrl)
+    setHistory(newHistory)
+    setCurrentIndex(newHistory.length - 1)
+    setInputUrl(newUrl)
+  }
+
+  const goBack = () => {
+    if (canGoBack) {
+      const newIndex = currentIndex - 1
+      setCurrentIndex(newIndex)
+      setInputUrl(history[newIndex])
+    }
+  }
+
+  const goForward = () => {
+    if (canGoForward) {
+      const newIndex = currentIndex + 1
+      setCurrentIndex(newIndex)
+      setInputUrl(history[newIndex])
+    }
+  }
+
+  const handleRefresh = () => {
+    // 刷新当前页面
+    setInputUrl(url)
+  }
+
+  const handleHome = () => {
+    handleNavigate("www.apple.com")
   }
 
   return (
@@ -21,6 +55,7 @@ export function BrowserApp() {
         <div className="flex items-center gap-1">
           <button
             disabled={!canGoBack}
+            onClick={goBack}
             className={cn(
               "p-1.5 rounded-md transition-colors",
               canGoBack
@@ -32,6 +67,7 @@ export function BrowserApp() {
           </button>
           <button
             disabled={!canGoForward}
+            onClick={goForward}
             className={cn(
               "p-1.5 rounded-md transition-colors",
               canGoForward
@@ -48,11 +84,11 @@ export function BrowserApp() {
           <Search className="w-3.5 h-3.5 text-gray-500" />
           <input
             type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                handleNavigate(url)
+                handleNavigate(inputUrl)
               }
             }}
             className="flex-1 bg-transparent text-[13px] text-gray-700 outline-none"
@@ -62,10 +98,16 @@ export function BrowserApp() {
 
         {/* Toolbar Buttons */}
         <div className="flex items-center gap-1">
-          <button className="p-1.5 hover:bg-gray-200/50 rounded-md transition-colors">
+          <button
+            onClick={handleRefresh}
+            className="p-1.5 hover:bg-gray-200/50 rounded-md transition-colors"
+          >
             <RotateCw className="w-4 h-4 text-gray-700" />
           </button>
-          <button className="p-1.5 hover:bg-gray-200/50 rounded-md transition-colors">
+          <button
+            onClick={handleHome}
+            className="p-1.5 hover:bg-gray-200/50 rounded-md transition-colors"
+          >
             <Home className="w-4 h-4 text-gray-700" />
           </button>
         </div>
@@ -75,7 +117,7 @@ export function BrowserApp() {
       <div className="flex-1 overflow-auto bg-white">
         <div className="max-w-4xl mx-auto p-12">
           <div className="text-center space-y-6">
-            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
               <Globe className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900">欢迎使用 Safari</h1>
@@ -98,7 +140,7 @@ export function BrowserApp() {
                   className="p-4 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors group"
                 >
                   <div className="w-12 h-12 mx-auto mb-2 bg-white rounded-lg flex items-center justify-center shadow-sm group-hover:shadow">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded" />
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-500 rounded" />
                   </div>
                   <div className="text-[13px] font-medium text-gray-700">
                     {site.name}
@@ -110,7 +152,7 @@ export function BrowserApp() {
             {/* Features */}
             <div className="grid grid-cols-3 gap-6 mt-16 text-left">
               <div className="p-6 rounded-xl bg-gray-50">
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-10 h-10 bg-blue-400 rounded-lg flex items-center justify-center mb-3 shadow-sm">
                   <Shield className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-[15px] font-semibold text-gray-900 mb-2">
@@ -122,7 +164,7 @@ export function BrowserApp() {
               </div>
 
               <div className="p-6 rounded-xl bg-gray-50">
-                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-10 h-10 bg-green-400 rounded-lg flex items-center justify-center mb-3 shadow-sm">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-[15px] font-semibold text-gray-900 mb-2">
@@ -134,7 +176,7 @@ export function BrowserApp() {
               </div>
 
               <div className="p-6 rounded-xl bg-gray-50">
-                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-3">
+                <div className="w-10 h-10 bg-purple-400 rounded-lg flex items-center justify-center mb-3 shadow-sm">
                   <Battery className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-[15px] font-semibold text-gray-900 mb-2">
@@ -151,6 +193,3 @@ export function BrowserApp() {
     </div>
   )
 }
-
-// Import icons for features
-import { Globe, Shield, Zap, Battery } from "lucide-react"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect } from "react"
-import { motion, PanInfo } from "framer-motion"
+import { motion, PanInfo, useDragControls } from "framer-motion"
 import { useWindowStore } from "@/store/useWindowStore"
 import { WindowState } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -29,6 +29,7 @@ export function Window({ window }: WindowProps) {
     activeWindow,
   } = useWindowStore()
 
+  const dragControls = useDragControls()
   const [isDragging, setIsDragging] = useState(false)
   const isActive = activeWindow === window.id
 
@@ -79,15 +80,16 @@ export function Window({ window }: WindowProps) {
   return (
     <motion.div
       drag={!window.isMaximized}
+      dragControls={dragControls}
       dragMomentum={false}
       dragElastic={0}
       dragConstraints={{ left: 0, top: 28 }}
+      dragListener={false}
       onDragStart={() => {
         setIsDragging(true)
         focusWindow(window.id)
       }}
       onDragEnd={handleDragEnd}
-      dragListener={false}
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{
         scale: 1,
@@ -112,15 +114,9 @@ export function Window({ window }: WindowProps) {
           "vibrancy-toolbar border-b border-black/5",
           "cursor-move no-select"
         )}
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
           if (!window.isMaximized) {
-            e.currentTarget.parentElement?.dispatchEvent(
-              new MouseEvent("mousedown", {
-                bubbles: true,
-                clientX: e.clientX,
-                clientY: e.clientY,
-              })
-            )
+            dragControls.start(e)
           }
         }}
       >
