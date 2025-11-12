@@ -48,6 +48,63 @@ const initialFiles: FileSystemItem[] = [
     createdAt: new Date(),
     modifiedAt: new Date(),
   },
+  {
+    name: "demo-html",
+    type: "html",
+    title: "示例网页.html",
+    content: `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>示例网页</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    h1 { font-size: 2.5em; margin-bottom: 20px; }
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 30px;
+      margin: 20px 0;
+    }
+    button {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    button:hover { transform: scale(1.05); }
+  </style>
+</head>
+<body>
+  <h1>🎨 欢迎来到 HTML 编辑器</h1>
+  <div class="card">
+    <h2>功能特性</h2>
+    <ul>
+      <li>创建和编辑 HTML 文件</li>
+      <li>实时预览网页效果</li>
+      <li>支持 CSS 样式和 JavaScript</li>
+      <li>现代化的代码编辑体验</li>
+    </ul>
+    <button onclick="alert('Hello from HTML!')">点击测试</button>
+  </div>
+</body>
+</html>`,
+    createdAt: new Date(),
+    modifiedAt: new Date(),
+  },
 ]
 
 export const useFileSystemStore = create<FileSystemStore>((set, get) => ({
