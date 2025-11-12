@@ -100,10 +100,10 @@ export function Dock() {
 
         {/* Trash */}
         <DockIcon
-          app={{ name: "finder", icon: <Trash2 className="w-full h-full" />, label: "废纸篓" }}
+          app={{ name: "trash", icon: <Trash2 className="w-full h-full" />, label: "废纸篓" }}
           isRunning={false}
           onClick={() => {}}
-          onHover={() => {}}
+          onHover={(hovered: boolean) => {}}
           index={dockApps.length}
         />
       </motion.div>

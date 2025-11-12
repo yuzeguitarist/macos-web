@@ -23,7 +23,7 @@ export function CalculatorApp() {
 
     if (previousValue === null) {
       setPreviousValue(inputValue)
-    } else if (operator) {
+    } else if (operator && !waitingForOperand) {
       const result = calculate(previousValue, inputValue, operator)
       setDisplay(String(result))
       setPreviousValue(result)
@@ -43,8 +43,6 @@ export function CalculatorApp() {
         return a * b
       case "÷":
         return a / b
-      case "%":
-        return a % b
       default:
         return b
     }
@@ -81,10 +79,15 @@ export function CalculatorApp() {
     setDisplay(String(value * -1))
   }
 
+  const handlePercent = () => {
+    const value = parseFloat(display)
+    setDisplay(String(value / 100))
+  }
+
   const buttons = [
     { label: "AC", onClick: handleClear, className: "bg-gray-300 hover:bg-gray-400 text-gray-900" },
     { label: "±", onClick: handlePlusMinus, className: "bg-gray-300 hover:bg-gray-400 text-gray-900" },
-    { label: "%", onClick: () => handleOperatorClick("%"), className: "bg-gray-300 hover:bg-gray-400 text-gray-900" },
+    { label: "%", onClick: handlePercent, className: "bg-gray-300 hover:bg-gray-400 text-gray-900" },
     { label: "÷", onClick: () => handleOperatorClick("÷"), className: "bg-orange-500 hover:bg-orange-600 text-white" },
 
     { label: "7", onClick: () => handleNumberClick("7"), className: "bg-gray-600 hover:bg-gray-700 text-white" },

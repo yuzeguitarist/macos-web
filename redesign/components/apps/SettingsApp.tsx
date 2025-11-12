@@ -131,10 +131,7 @@ export function SettingsApp() {
                     {["blue", "green", "orange", "red", "pink"].map((color) => (
                       <div
                         key={color}
-                        className={cn(
-                          "w-6 h-6 rounded-full cursor-pointer border-2 border-white shadow-md",
-                          `bg-${color}-500`
-                        )}
+                        className="w-6 h-6 rounded-full cursor-pointer border-2 border-white shadow-md"
                         style={{
                           backgroundColor: {
                             blue: "#3b82f6",
