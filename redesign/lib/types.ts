@@ -5,6 +5,7 @@ export type AppName =
   | "calculator"
   | "settings"
   | "browser"
+  | "trash"
 
 export interface WindowState {
   id: string

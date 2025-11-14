@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { useFileSystemStore } from "@/store/useFileSystemStore"
 
 interface TerminalLine {
   type: "command" | "output" | "error"
@@ -9,6 +10,7 @@ interface TerminalLine {
 }
 
 export function TerminalApp() {
+  const { files, addFile, deleteFile, getFile } = useFileSystemStore()
   const [lines, setLines] = useState<TerminalLine[]>([
     { type: "output", content: "macOS Terminal v2.0" },
     { type: "output", content: 'Type "help" for available commands.' },
@@ -53,14 +55,17 @@ export function TerminalApp() {
   cat <file>  - Display file contents
   mkdir <dir> - Create directory
   touch <file>- Create empty file
-  rm <file>   - Remove file
+  rm <file>   - Remove file (move to trash)
   uname       - System information
   uptime      - System uptime
   history     - Show command history
   cal         - Show calendar
   tree        - Display directory tree
   ps          - Show running processes
-  man <cmd>   - Show manual for command`
+  man <cmd>   - Show manual for command
+  find <name> - Find files by name
+  wc <file>   - Word count
+  grep <text> - Search in files`
         break
       case "clear":
         setLines([])
@@ -85,16 +90,15 @@ export function TerminalApp() {
         break
       case "ls":
         if (args[0] === "-la" || args[0] === "-l") {
-          output = `total 40
-drwxr-xr-x  7 guest  staff   224  ${new Date().toLocaleDateString()}  .
-drwxr-xr-x  3 root   admin    96  ${new Date().toLocaleDateString()}  ..
-drwxr-xr-x  5 guest  staff   160  ${new Date().toLocaleDateString()}  Documents
-drwxr-xr-x  3 guest  staff    96  ${new Date().toLocaleDateString()}  Downloads
-drwxr-xr-x  4 guest  staff   128  ${new Date().toLocaleDateString()}  Desktop
-drwxr-xr-x  6 guest  staff   192  ${new Date().toLocaleDateString()}  Pictures
-drwxr-xr-x  4 guest  staff   128  ${new Date().toLocaleDateString()}  Music`
+          const fileList = files.map(f => {
+            const date = new Date(f.modifiedAt).toLocaleDateString()
+            const type = f.type === "folder" ? "drwxr-xr-x" : "-rw-r--r--"
+            const size = f.content ? f.content.length : 0
+            return `${type}  1 guest  staff   ${size.toString().padStart(6)}  ${date}  ${f.title}`
+          }).join("\n")
+          output = `total ${files.length}\n${fileList}`
         } else {
-          output = "Documents  Downloads  Desktop  Pictures  Music  Videos"
+          output = files.map(f => f.title).join("  ")
         }
         break
       case "cd":
@@ -117,11 +121,12 @@ drwxr-xr-x  4 guest  staff   128  ${new Date().toLocaleDateString()}  Music`
         if (!args[0]) {
           output = "cat: missing file operand"
         } else {
-          output = `# ${args[0]}
-This is a sample file in the macOS terminal simulator.
-You can view file contents using the cat command.
-
-Sample content for demonstration purposes.`
+          const file = files.find(f => f.title === args[0] || f.name === args[0])
+          if (file) {
+            output = file.content || `File: ${file.title}\nType: ${file.type}`
+          } else {
+            output = `cat: ${args[0]}: No such file`
+          }
         }
         break
       case "mkdir":
@@ -131,7 +136,17 @@ Sample content for demonstration purposes.`
         output = args[0] ? `Created file: ${args[0]}` : "touch: missing file operand"
         break
       case "rm":
-        output = args[0] ? `Removed: ${args[0]}` : "rm: missing operand"
+        if (!args[0]) {
+          output = "rm: missing operand"
+        } else {
+          const file = files.find(f => f.title === args[0] || f.name === args[0])
+          if (file) {
+            deleteFile(file.name)
+            output = `Removed: ${args[0]} (moved to trash)`
+          } else {
+            output = `rm: ${args[0]}: No such file`
+          }
+        }
         break
       case "uname":
         output = args[0] === "-a"
@@ -225,6 +240,93 @@ SEE ALSO
      help(1), man(1)`
         }
         break
+      case "find":
+        if (!args[0]) {
+          output = "find: missing search term"
+        } else {
+          const searchTerm = args[0].toLowerCase()
+          const matches = files.filter(f =>
+            f.title.toLowerCase().includes(searchTerm) ||
+            f.name.toLowerCase().includes(searchTerm)
+          )
+          if (matches.length > 0) {
+            output = matches.map(f => `./${f.title}`).join("\n")
+          } else {
+            output = `find: no files matching '${args[0]}'`
+          }
+        }
+        break
+      case "wc":
+        if (!args[0]) {
+          output = "wc: missing file operand"
+        } else {
+          const file = files.find(f => f.title === args[0] || f.name === args[0])
+          if (file && file.content) {
+            const lines = file.content.split("\n").length
+            const words = file.content.split(/\s+/).length
+            const chars = file.content.length
+            output = `  ${lines}  ${words}  ${chars}  ${file.title}`
+          } else if (file) {
+            output = `wc: ${args[0]}: file has no content`
+          } else {
+            output = `wc: ${args[0]}: No such file`
+          }
+        }
+        break
+      case "grep":
+        if (!args[0]) {
+          output = "grep: missing search pattern"
+        } else {
+          const searchPattern = args[0].toLowerCase()
+          const results: string[] = []
+          files.forEach(f => {
+            if (f.content && f.content.toLowerCase().includes(searchPattern)) {
+              const lines = f.content.split("\n")
+              lines.forEach((line, idx) => {
+                if (line.toLowerCase().includes(searchPattern)) {
+                  results.push(`${f.title}:${idx + 1}: ${line}`)
+                }
+              })
+            }
+          })
+          output = results.length > 0
+            ? results.slice(0, 10).join("\n") + (results.length > 10 ? `\n... and ${results.length - 10} more matches` : "")
+            : `grep: no matches for '${args[0]}'`
+        }
+        break
+      case "open":
+        if (!args[0]) {
+          output = "open: missing file operand"
+        } else {
+          const file = files.find(f => f.title === args[0] || f.name === args[0])
+          if (file) {
+            output = `Opening ${file.title}...`
+          } else {
+            output = `open: ${args[0]}: No such file`
+          }
+        }
+        break
+      case "df":
+        output = `Filesystem     Size   Used  Avail  Capacity
+/dev/disk1    500GB  320GB  180GB    64%
+/dev/disk2    1TB    650GB  350GB    65%`
+        break
+      case "top":
+        output = `Processes: 345 total, 3 running, 342 sleeping
+CPU usage: 12.5% user, 8.2% sys, 79.3% idle
+Memory: 16.00GB used (8.5GB wired), 7.50GB unused`
+        break
+      case "ping":
+        if (!args[0]) {
+          output = "ping: missing host operand"
+        } else {
+          output = `PING ${args[0]} (127.0.0.1): 56 data bytes
+64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.045 ms
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.052 ms
+--- ${args[0]} ping statistics ---
+2 packets transmitted, 2 packets received, 0.0% packet loss`
+        }
+        break
       default:
         if (trimmed.startsWith("echo ")) {
           output = trimmed.substring(5)
@@ -263,11 +365,27 @@ SEE ALSO
       }
     } else if (e.key === "Tab") {
       e.preventDefault()
-      // Simple tab completion
-      const commands = ["help", "clear", "date", "echo", "ls", "pwd", "whoami", "cd", "cat", "mkdir", "touch", "rm", "uname", "uptime", "history", "cal", "tree", "ps", "man"]
-      const match = commands.find(cmd => cmd.startsWith(currentCommand.toLowerCase()))
-      if (match) {
-        setCurrentCommand(match)
+      // Tab completion for commands and files
+      const commands = ["help", "clear", "date", "echo", "ls", "pwd", "whoami", "cd", "cat", "mkdir", "touch", "rm", "uname", "uptime", "history", "cal", "tree", "ps", "man", "find", "wc", "grep", "open", "df", "top", "ping"]
+      const parts = currentCommand.split(" ")
+
+      if (parts.length === 1) {
+        // Complete command
+        const match = commands.find(cmd => cmd.startsWith(currentCommand.toLowerCase()))
+        if (match) {
+          setCurrentCommand(match)
+        }
+      } else {
+        // Complete file name
+        const lastPart = parts[parts.length - 1].toLowerCase()
+        const match = files.find(f =>
+          f.title.toLowerCase().startsWith(lastPart) ||
+          f.name.toLowerCase().startsWith(lastPart)
+        )
+        if (match) {
+          parts[parts.length - 1] = match.title
+          setCurrentCommand(parts.join(" "))
+        }
       }
     }
   }
