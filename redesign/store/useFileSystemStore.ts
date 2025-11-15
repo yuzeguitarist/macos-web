@@ -3,9 +3,13 @@ import { FileSystemItem } from "@/lib/types"
 
 interface FileSystemStore {
   files: FileSystemItem[]
+  trashedFiles: FileSystemItem[]
   addFile: (file: FileSystemItem) => void
   updateFile: (name: string, updates: Partial<Pick<FileSystemItem, 'content' | 'title'>>) => void
   deleteFile: (name: string) => void
+  restoreFile: (name: string) => void
+  permanentlyDeleteFile: (name: string) => void
+  emptyTrash: () => void
   getFile: (name: string) => FileSystemItem | undefined
 }
 
@@ -109,6 +113,7 @@ const initialFiles: FileSystemItem[] = [
 
 export const useFileSystemStore = create<FileSystemStore>((set, get) => ({
   files: initialFiles,
+  trashedFiles: [],
 
   addFile: (file) => {
     set((state) => ({
@@ -127,9 +132,37 @@ export const useFileSystemStore = create<FileSystemStore>((set, get) => ({
   },
 
   deleteFile: (name) => {
+    set((state) => {
+      const fileToDelete = state.files.find((f) => f.name === name)
+      if (!fileToDelete) return state
+
+      return {
+        files: state.files.filter((f) => f.name !== name),
+        trashedFiles: [...state.trashedFiles, { ...fileToDelete, modifiedAt: new Date() }],
+      }
+    })
+  },
+
+  restoreFile: (name) => {
+    set((state) => {
+      const fileToRestore = state.trashedFiles.find((f) => f.name === name)
+      if (!fileToRestore) return state
+
+      return {
+        files: [...state.files, fileToRestore],
+        trashedFiles: state.trashedFiles.filter((f) => f.name !== name),
+      }
+    })
+  },
+
+  permanentlyDeleteFile: (name) => {
     set((state) => ({
-      files: state.files.filter((f) => f.name !== name),
+      trashedFiles: state.trashedFiles.filter((f) => f.name !== name),
     }))
+  },
+
+  emptyTrash: () => {
+    set({ trashedFiles: [] })
   },
 
   getFile: (name) => {

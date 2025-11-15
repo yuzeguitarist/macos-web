@@ -14,6 +14,7 @@ import { NotesApp } from "./apps/NotesApp"
 import { CalculatorApp } from "./apps/CalculatorApp"
 import { SettingsApp } from "./apps/SettingsApp"
 import { BrowserApp } from "./apps/BrowserApp"
+import { TrashApp } from "./apps/TrashApp"
 
 interface WindowProps {
   window: WindowState
@@ -54,6 +55,8 @@ export function Window({ window }: WindowProps) {
         return <SettingsApp />
       case "browser":
         return <BrowserApp />
+      case "trash":
+        return <TrashApp />
       default:
         return <div>App not found</div>
     }

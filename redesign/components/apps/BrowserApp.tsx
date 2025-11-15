@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, RotateCw, Home, Search, Globe, Shield, Zap, Battery, FileText } from "lucide-react"
+import { ChevronLeft, ChevronRight, RotateCw, Home, Search, Globe, Shield, Zap, Battery, FileText, Apple, Github } from "lucide-react"
 import { useFileSystemStore } from "@/store/useFileSystemStore"
+import { predefinedPages } from "@/lib/predefinedPages"
 
 export function BrowserApp() {
   const { files } = useFileSystemStore()
@@ -17,10 +18,27 @@ export function BrowserApp() {
   const canGoBack = currentIndex > 0
   const canGoForward = currentIndex < history.length - 1
 
-  // Check if current URL is an HTML file
+  // Check if current URL is an HTML file or predefined page
   const currentHtmlFile = htmlFiles.find(
     (f) => f.name === url || f.title === url || url.includes(f.name)
   )
+
+  // Normalize URL: remove protocol, www, trailing slashes and paths
+  const normalizeUrl = (rawUrl: string) => {
+    return rawUrl
+      .replace(/^(https?:\/\/)?(www\.)?/, '')  // Remove protocol and www
+      .replace(/\/.*$/, '')                     // Remove path and trailing slash
+  }
+
+  const currentPredefinedSite = predefinedPages[url] || predefinedPages[normalizeUrl(url)]
+  const currentPredefinedPage = currentPredefinedSite?.content
+
+  const getSiteIcon = (domain: string) => {
+    const host = domain.toLowerCase().trim()
+    if (host === "apple.com" || host.endsWith(".apple.com")) return Apple
+    if (host === "github.com" || host.endsWith(".github.com")) return Github
+    return Globe
+  }
 
   const handleNavigate = (newUrl: string) => {
     // 截断forward历史并添加新URL
@@ -142,6 +160,14 @@ export function BrowserApp() {
             sandbox="allow-scripts allow-forms allow-modals"
             title={currentHtmlFile.title}
           />
+        ) : currentPredefinedPage ? (
+          // Display predefined web page
+          <iframe
+            srcDoc={currentPredefinedPage}
+            className="w-full h-full border-none"
+            sandbox="allow-scripts allow-forms allow-modals"
+            title={url}
+          />
         ) : url === "home" ? (
           // Home page
           <div className="max-w-4xl mx-auto p-12">
@@ -153,6 +179,33 @@ export function BrowserApp() {
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                 在地址栏输入 HTML 文件名来访问您创建的网页，或浏览下方的快捷链接。
               </p>
+
+              {/* Quick Access Sites */}
+              <div className="mt-12">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  快速访问
+                </h2>
+                <div className="grid grid-cols-3 gap-4">
+                  {Object.values(predefinedPages).map((site) => {
+                    const SiteIcon = getSiteIcon(site.domain)
+                    return (
+                      <button
+                        key={site.domain}
+                        onClick={() => handleNavigate(site.domain)}
+                        className="p-6 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors group text-left"
+                      >
+                        <div className="w-16 h-16 mx-auto mb-3 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:shadow">
+                          <SiteIcon className="w-8 h-8 text-blue-500" />
+                        </div>
+                        <div className="text-center">
+                          <div className="text-[15px] font-medium text-gray-700">{site.title}</div>
+                          <div className="text-[12px] text-gray-500 mt-1">{site.description}</div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
               {/* HTML Files */}
               {htmlFiles.length > 0 && (
@@ -175,23 +228,6 @@ export function BrowserApp() {
                         </div>
                       </button>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Links - Only show if we have a demo HTML file */}
-              {htmlFiles.length === 0 && (
-                <div className="mt-12">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                    开始创建
-                  </h2>
-                  <div className="max-w-md mx-auto p-8 rounded-xl bg-gray-50">
-                    <p className="text-gray-600 text-center mb-4">
-                      打开备忘录应用，创建你的第一个 HTML 文件，然后在这里访问它。
-                    </p>
-                    <div className="text-[13px] text-gray-500 text-center">
-                      点击备忘录中的 + 按钮 → 选择 HTML
-                    </div>
                   </div>
                 </div>
               )}

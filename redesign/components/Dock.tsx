@@ -60,10 +60,21 @@ export function Dock() {
       calculator: { width: 320, height: 520 },
       settings: { width: 900, height: 650 },
       browser: { width: 1000, height: 700 },
+      trash: { width: 800, height: 600 },
+    }
+
+    const appLabels: Record<AppName, string> = {
+      finder: "访达",
+      terminal: "终端",
+      notes: "备忘录",
+      calculator: "计算器",
+      settings: "系统设置",
+      browser: "Safari",
+      trash: "废纸篓",
     }
 
     createWindow(app, {
-      title: dockApps.find((a) => a.name === app)?.label || app,
+      title: appLabels[app] || app,
       size: defaultSizes[app],
       position: {
         x: 100 + Math.random() * 100,
@@ -101,9 +112,9 @@ export function Dock() {
         {/* Trash */}
         <DockIcon
           app={{ name: "trash", icon: <Trash2 className="w-full h-full" />, label: "废纸篓" }}
-          isRunning={false}
-          onClick={() => {}}
-          onHover={(hovered: boolean) => {}}
+          isRunning={isAppRunning("trash")}
+          onClick={() => handleAppClick("trash")}
+          onHover={(hovered: boolean) => setHoveredApp(hovered ? "trash" : null)}
           index={dockApps.length}
         />
       </motion.div>
