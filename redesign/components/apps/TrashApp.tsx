@@ -157,6 +157,7 @@ export function TrashApp() {
                       onClick={(e) => {
                         e.stopPropagation()
                         restoreFile(file.name)
+                        setSelectedItems((prev) => prev.filter((n) => n !== file.name))
                       }}
                       className="p-2 hover:bg-blue-100 rounded-md transition-colors"
                       title="还原"
@@ -167,6 +168,7 @@ export function TrashApp() {
                       onClick={(e) => {
                         e.stopPropagation()
                         permanentlyDeleteFile(file.name)
+                        setSelectedItems((prev) => prev.filter((n) => n !== file.name))
                       }}
                       className="p-2 hover:bg-red-100 rounded-md transition-colors"
                       title="永久删除"

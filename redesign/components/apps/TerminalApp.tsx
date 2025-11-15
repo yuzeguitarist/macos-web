@@ -262,8 +262,9 @@ SEE ALSO
         } else {
           const file = files.find(f => f.title === args[0] || f.name === args[0])
           if (file && file.content) {
-            const lines = file.content.split("\n").length
-            const words = file.content.split(/\s+/).length
+            const content = file.content.trimEnd() // Trim trailing whitespace
+            const lines = content ? content.split("\n").length : 0
+            const words = content.trim() ? content.trim().split(/\s+/).length : 0
             const chars = file.content.length
             output = `  ${lines}  ${words}  ${chars}  ${file.title}`
           } else if (file) {

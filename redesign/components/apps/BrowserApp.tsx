@@ -161,7 +161,14 @@ export function BrowserApp() {
     (f) => f.name === url || f.title === url || url.includes(f.name)
   )
 
-  const currentPredefinedPage = predefinedPages[url] || predefinedPages[url.replace(/^(https?:\/\/)?(www\.)?/, '')]
+  // Normalize URL: remove protocol, www, trailing slashes and paths
+  const normalizeUrl = (rawUrl: string) => {
+    return rawUrl
+      .replace(/^(https?:\/\/)?(www\.)?/, '')  // Remove protocol and www
+      .replace(/\/.*$/, '')                     // Remove path and trailing slash
+  }
+
+  const currentPredefinedPage = predefinedPages[url] || predefinedPages[normalizeUrl(url)]
 
   const handleNavigate = (newUrl: string) => {
     // 截断forward历史并添加新URL
