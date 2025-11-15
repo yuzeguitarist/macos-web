@@ -36,7 +36,8 @@ export function SettingsApp() {
 
   const {
     darkMode,
-    setDarkMode,
+    appearance,
+    setAppearance,
     autoHideDock,
     setAutoHideDock,
     nightShift,
@@ -107,13 +108,18 @@ export function SettingsApp() {
           {selectedCategory === "general" && (
             <div className="space-y-6">
               <SettingItem
-                label="深色模式"
-                description="使用深色外观"
+                label="外观"
+                description="选择浅色、深色或自动外观"
                 control={
-                  <Toggle
-                    enabled={darkMode}
-                    onChange={setDarkMode}
-                  />
+                  <select
+                    value={appearance}
+                    onChange={(e) => setAppearance(e.target.value as 'light' | 'dark' | 'auto')}
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]"
+                  >
+                    <option value="light">浅色</option>
+                    <option value="dark">深色</option>
+                    <option value="auto">自动</option>
+                  </select>
                 }
               />
               <SettingItem

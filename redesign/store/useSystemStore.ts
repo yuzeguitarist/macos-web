@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware'
 
 interface SystemSettings {
   // General
-  darkMode: boolean
   autoHideDock: boolean
   defaultBrowser: string
 
@@ -42,7 +41,10 @@ interface SystemSettings {
 }
 
 interface SystemStore extends SystemSettings {
-  setDarkMode: (enabled: boolean) => void
+  // Derived property: darkMode is computed from appearance
+  // Returns true if appearance is 'dark', or if appearance is 'auto' and system prefers dark
+  darkMode: boolean
+
   setAutoHideDock: (enabled: boolean) => void
   setDefaultBrowser: (browser: string) => void
   setAppearance: (appearance: 'light' | 'dark' | 'auto') => void
@@ -68,13 +70,24 @@ interface SystemStore extends SystemSettings {
 
 export const useSystemStore = create<SystemStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Initial state
-      darkMode: false,
       autoHideDock: false,
       defaultBrowser: 'Safari',
       appearance: 'light',
       accentColor: 'blue',
+
+      // Derived darkMode getter
+      get darkMode() {
+        const { appearance } = get()
+        if (appearance === 'dark') return true
+        if (appearance === 'light') return false
+        // For 'auto', check system preference
+        if (typeof window !== 'undefined' && window.matchMedia) {
+          return window.matchMedia('(prefers-color-scheme: dark)').matches
+        }
+        return false
+      },
       resolution: '默认',
       nightShift: false,
       trueTone: true,
@@ -94,7 +107,6 @@ export const useSystemStore = create<SystemStore>()(
       brightness: 80,
 
       // Actions
-      setDarkMode: (enabled) => set({ darkMode: enabled }),
       setAutoHideDock: (enabled) => set({ autoHideDock: enabled }),
       setDefaultBrowser: (browser) => set({ defaultBrowser: browser }),
       setAppearance: (appearance) => set({ appearance }),

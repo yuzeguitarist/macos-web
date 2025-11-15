@@ -15,31 +15,15 @@ export function Desktop() {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
       const cmdKey = isMac ? e.metaKey : e.ctrlKey
 
-      // Command/Ctrl + Q: Close active window
-      if (cmdKey && e.key === 'q') {
+      // Command/Ctrl + Q: Close active window (only prevent if there's an active window)
+      if (cmdKey && e.key === 'q' && activeWindow) {
         e.preventDefault()
-        if (activeWindow) {
-          closeWindow(activeWindow)
-        }
+        closeWindow(activeWindow)
       }
 
-      // Command/Ctrl + Backspace/Delete: Delete (placeholder - can be implemented per app)
-      if (cmdKey && (e.key === 'Backspace' || e.key === 'Delete')) {
-        e.preventDefault()
-        console.log('Delete action triggered')
-      }
-
-      // Ctrl + C: Copy (native browser behavior, but can be customized)
-      if (e.ctrlKey && e.key === 'c') {
-        // Let native behavior handle this
-        console.log('Copy action')
-      }
-
-      // Command + Tab: Switch windows (placeholder)
-      if (cmdKey && e.key === 'Tab') {
-        e.preventDefault()
-        console.log('Window switcher triggered')
-      }
+      // Note: Other shortcuts like Ctrl+Backspace, Ctrl+Tab, Ctrl+C are intentionally
+      // not prevented to preserve native browser behavior until specific app functionality
+      // is implemented that requires overriding them.
     }
 
     document.addEventListener('keydown', handleKeyDown)
