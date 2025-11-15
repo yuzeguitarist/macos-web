@@ -1,11 +1,51 @@
 "use client"
 
+import { useEffect } from "react"
 import { MenuBar } from "./MenuBar"
 import { Dock } from "./Dock"
 import { WindowManager } from "./WindowManager"
 import { motion } from "framer-motion"
+import { useWindowStore } from "@/store/useWindowStore"
 
 export function Desktop() {
+  const { closeWindow, activeWindow } = useWindowStore()
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+      const cmdKey = isMac ? e.metaKey : e.ctrlKey
+
+      // Command/Ctrl + Q: Close active window
+      if (cmdKey && e.key === 'q') {
+        e.preventDefault()
+        if (activeWindow) {
+          closeWindow(activeWindow)
+        }
+      }
+
+      // Command/Ctrl + Backspace/Delete: Delete (placeholder - can be implemented per app)
+      if (cmdKey && (e.key === 'Backspace' || e.key === 'Delete')) {
+        e.preventDefault()
+        console.log('Delete action triggered')
+      }
+
+      // Ctrl + C: Copy (native browser behavior, but can be customized)
+      if (e.ctrlKey && e.key === 'c') {
+        // Let native behavior handle this
+        console.log('Copy action')
+      }
+
+      // Command + Tab: Switch windows (placeholder)
+      if (cmdKey && e.key === 'Tab') {
+        e.preventDefault()
+        console.log('Window switcher triggered')
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [activeWindow, closeWindow])
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
