@@ -34,8 +34,9 @@ export function BrowserApp() {
   const currentPredefinedPage = currentPredefinedSite?.content
 
   const getSiteIcon = (domain: string) => {
-    if (domain.includes("apple")) return Apple
-    if (domain.includes("github")) return Github
+    const host = domain.toLowerCase().trim()
+    if (host === "apple.com" || host.endsWith(".apple.com")) return Apple
+    if (host === "github.com" || host.endsWith(".github.com")) return Github
     return Globe
   }
 

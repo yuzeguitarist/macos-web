@@ -53,8 +53,8 @@ export const predefinedPages: Record<string, PredefinedSite> = {
     </div>
   </div>
   <div class="footer">
-    <p>这是一个模拟的 Apple 网站页面</p>
-    <p>© 2024 Apple Inc. 保留所有权利</p>
+    <p style="color: #999; font-weight: 600;">这是一个教育演示页面，非 Apple Inc. 官方网站</p>
+    <p>仅用于学习和演示目的，与 Apple Inc. 无任何关联</p>
   </div>
 </body>
 </html>`,
@@ -80,6 +80,7 @@ export const predefinedPages: Record<string, PredefinedSite> = {
     .buttons { margin-top: 20px; }
     .buttons button { margin: 0 4px; padding: 10px 16px; border: none; background: #f8f9fa; color: #3c4043; font-size: 14px; border-radius: 4px; cursor: pointer; }
     .buttons button:hover { box-shadow: 0 1px 1px rgba(0,0,0,.1); border: 1px solid #dadce0; }
+    .footer { position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 12px; color: #999; }
   </style>
 </head>
 <body>
@@ -96,6 +97,10 @@ export const predefinedPages: Record<string, PredefinedSite> = {
       <button>Google 搜索</button>
       <button>手气不错</button>
     </div>
+  </div>
+  <div class="footer">
+    <p style="font-weight: 600;">这是一个教育演示页面，非 Google LLC 官方网站</p>
+    <p>仅用于学习和演示目的，与 Google LLC 无任何关联</p>
   </div>
 </body>
 </html>`,
@@ -122,6 +127,7 @@ export const predefinedPages: Record<string, PredefinedSite> = {
     .features { max-width: 1200px; margin: 80px auto; padding: 0 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
     .feature { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 32px; }
     .feature h3 { color: #58a6ff; font-size: 24px; margin-bottom: 16px; }
+    .footer { text-align: center; padding: 40px 20px; color: #8b949e; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -152,6 +158,10 @@ export const predefinedPages: Record<string, PredefinedSite> = {
       <h3>CI/CD</h3>
       <p>自动化构建、测试和部署，提高开发效率</p>
     </div>
+  </div>
+  <div class="footer">
+    <p style="font-weight: 600;">这是一个教育演示页面，非 GitHub, Inc. 官方网站</p>
+    <p>仅用于学习和演示目的，与 GitHub, Inc. 无任何关联</p>
   </div>
 </body>
 </html>`,
