@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { useFileSystemStore } from "@/store/useFileSystemStore"
+import { getCommandNames, getHelpText } from "@/lib/terminalCommands"
 
 interface TerminalLine {
   type: "command" | "output" | "error"
@@ -43,29 +44,7 @@ export function TerminalApp() {
 
     switch (command) {
       case "help":
-        output = `Available commands:
-  help        - Show this help message
-  clear       - Clear the terminal
-  date        - Show current date and time
-  echo <msg>  - Echo a message
-  ls [dir]    - List files in directory
-  pwd         - Print working directory
-  whoami      - Display current user
-  cd <dir>    - Change directory
-  cat <file>  - Display file contents
-  mkdir <dir> - Create directory
-  touch <file>- Create empty file
-  rm <file>   - Remove file (move to trash)
-  uname       - System information
-  uptime      - System uptime
-  history     - Show command history
-  cal         - Show calendar
-  tree        - Display directory tree
-  ps          - Show running processes
-  man <cmd>   - Show manual for command
-  find <name> - Find files by name
-  wc <file>   - Word count
-  grep <text> - Search in files`
+        output = getHelpText()
         break
       case "clear":
         setLines([])
@@ -130,10 +109,35 @@ export function TerminalApp() {
         }
         break
       case "mkdir":
-        output = args[0] ? `Created directory: ${args[0]}` : "mkdir: missing operand"
+        if (!args[0]) {
+          output = "mkdir: missing operand"
+        } else {
+          const folderName = `folder-${Date.now()}`
+          addFile({
+            name: folderName,
+            type: "folder",
+            title: args[0],
+            createdAt: new Date(),
+            modifiedAt: new Date(),
+          })
+          output = `Created directory: ${args[0]}`
+        }
         break
       case "touch":
-        output = args[0] ? `Created file: ${args[0]}` : "touch: missing file operand"
+        if (!args[0]) {
+          output = "touch: missing file operand"
+        } else {
+          const fileName = `file-${Date.now()}`
+          addFile({
+            name: fileName,
+            type: "text",
+            title: args[0],
+            content: "",
+            createdAt: new Date(),
+            modifiedAt: new Date(),
+          })
+          output = `Created file: ${args[0]}`
+        }
         break
       case "rm":
         if (!args[0]) {
@@ -367,7 +371,7 @@ Memory: 16.00GB used (8.5GB wired), 7.50GB unused`
     } else if (e.key === "Tab") {
       e.preventDefault()
       // Tab completion for commands and files
-      const commands = ["help", "clear", "date", "echo", "ls", "pwd", "whoami", "cd", "cat", "mkdir", "touch", "rm", "uname", "uptime", "history", "cal", "tree", "ps", "man", "find", "wc", "grep", "open", "df", "top", "ping"]
+      const commands = getCommandNames()
       const parts = currentCommand.split(" ")
 
       if (parts.length === 1) {
