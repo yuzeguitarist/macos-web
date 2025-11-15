@@ -12,6 +12,7 @@ import {
   Users,
   Accessibility,
 } from "lucide-react"
+import { useSystemStore } from "@/store/useSystemStore"
 
 interface Category {
   id: string
@@ -32,16 +33,47 @@ const categories: Category[] = [
 
 export function SettingsApp() {
   const [selectedCategory, setSelectedCategory] = useState("general")
-  const [darkMode, setDarkMode] = useState(false)
-  const [autoHideDock, setAutoHideDock] = useState(false)
-  const [nightShift, setNightShift] = useState(false)
-  const [autoUpdate, setAutoUpdate] = useState(true)
-  const [soundEffects, setSoundEffects] = useState(true)
-  const [notifications, setNotifications] = useState(true)
-  const [fileVault, setFileVault] = useState(false)
+
+  const {
+    darkMode,
+    appearance,
+    setAppearance,
+    autoHideDock,
+    setAutoHideDock,
+    nightShift,
+    setNightShift,
+    soundEffects,
+    setSoundEffects,
+    notifications,
+    setNotifications,
+    fileVault,
+    setFileVault,
+    trueTone,
+    setTrueTone,
+    firewall,
+    setFirewall,
+    lockScreenNotifications,
+    setLockScreenNotifications,
+    bluetoothEnabled,
+    setBluetoothEnabled,
+    zoom,
+    setZoom,
+    displayContrast,
+    setDisplayContrast,
+    voiceOver,
+    setVoiceOver,
+    defaultBrowser,
+    setDefaultBrowser,
+    resolution,
+    setResolution,
+    refreshRate,
+    setRefreshRate,
+    cursorSize,
+    setCursorSize,
+  } = useSystemStore()
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full no-select">
       {/* Sidebar */}
       <div className="w-52 vibrancy-sidebar border-r border-black/5 p-3">
         <div className="space-y-1">
@@ -76,13 +108,18 @@ export function SettingsApp() {
           {selectedCategory === "general" && (
             <div className="space-y-6">
               <SettingItem
-                label="深色模式"
-                description="使用深色外观"
+                label="外观"
+                description="选择浅色、深色或自动外观"
                 control={
-                  <Toggle
-                    enabled={darkMode}
-                    onChange={setDarkMode}
-                  />
+                  <select
+                    value={appearance}
+                    onChange={(e) => setAppearance(e.target.value as 'light' | 'dark' | 'auto')}
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]"
+                  >
+                    <option value="light">浅色</option>
+                    <option value="dark">深色</option>
+                    <option value="auto">自动</option>
+                  </select>
                 }
               />
               <SettingItem
@@ -99,7 +136,11 @@ export function SettingsApp() {
                 label="默认浏览器"
                 description="选择默认的网页浏览器"
                 control={
-                  <select className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]">
+                  <select
+                    value={defaultBrowser}
+                    onChange={(e) => setDefaultBrowser(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]"
+                  >
                     <option>Safari</option>
                     <option>Chrome</option>
                     <option>Firefox</option>
@@ -160,7 +201,11 @@ export function SettingsApp() {
                 label="分辨率"
                 description="调整显示器分辨率"
                 control={
-                  <select className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]">
+                  <select
+                    value={resolution}
+                    onChange={(e) => setResolution(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]"
+                  >
                     <option>默认</option>
                     <option>1920 × 1080</option>
                     <option>2560 × 1440</option>
@@ -179,14 +224,18 @@ export function SettingsApp() {
                 label="True Tone"
                 description="根据环境光调整显示器色温"
                 control={
-                  <Toggle enabled={true} onChange={() => {}} />
+                  <Toggle enabled={trueTone} onChange={setTrueTone} />
                 }
               />
               <SettingItem
                 label="刷新率"
                 description="选择显示器刷新率"
                 control={
-                  <select className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]">
+                  <select
+                    value={refreshRate}
+                    onChange={(e) => setRefreshRate(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]"
+                  >
                     <option>60Hz</option>
                     <option>120Hz</option>
                   </select>
@@ -208,7 +257,7 @@ export function SettingsApp() {
                 label="防火墙"
                 description="阻止传入连接"
                 control={
-                  <Toggle enabled={true} onChange={() => {}} />
+                  <Toggle enabled={firewall} onChange={setFirewall} />
                 }
               />
               <SettingItem
@@ -236,7 +285,7 @@ export function SettingsApp() {
                 label="在锁定屏幕上显示"
                 description="锁定时显示通知"
                 control={
-                  <Toggle enabled={false} onChange={() => {}} />
+                  <Toggle enabled={lockScreenNotifications} onChange={setLockScreenNotifications} />
                 }
               />
               <SettingItem
@@ -264,7 +313,7 @@ export function SettingsApp() {
                 label="蓝牙"
                 description="已启用"
                 control={
-                  <Toggle enabled={true} onChange={() => {}} />
+                  <Toggle enabled={bluetoothEnabled} onChange={setBluetoothEnabled} />
                 }
               />
               <SettingItem
@@ -308,21 +357,25 @@ export function SettingsApp() {
                 label="缩放"
                 description="使用缩放功能放大屏幕"
                 control={
-                  <Toggle enabled={false} onChange={() => {}} />
+                  <Toggle enabled={zoom} onChange={setZoom} />
                 }
               />
               <SettingItem
                 label="显示器对比度"
                 description="增加显示器对比度"
                 control={
-                  <Toggle enabled={false} onChange={() => {}} />
+                  <Toggle enabled={displayContrast} onChange={setDisplayContrast} />
                 }
               />
               <SettingItem
                 label="光标大小"
                 description="调整光标大小"
                 control={
-                  <select className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]">
+                  <select
+                    value={cursorSize}
+                    onChange={(e) => setCursorSize(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-md text-[13px]"
+                  >
                     <option>正常</option>
                     <option>大</option>
                     <option>更大</option>
@@ -333,7 +386,7 @@ export function SettingsApp() {
                 label="语音"
                 description="朗读选中的文本"
                 control={
-                  <Toggle enabled={false} onChange={() => {}} />
+                  <Toggle enabled={voiceOver} onChange={setVoiceOver} />
                 }
               />
             </div>
@@ -372,13 +425,13 @@ function Toggle({ enabled, onChange }: ToggleProps) {
     <button
       onClick={() => onChange(!enabled)}
       className={cn(
-        "relative w-12 h-7 rounded-full transition-colors",
-        enabled ? "bg-blue-500" : "bg-gray-300"
+        "relative w-12 h-7 rounded-full transition-all flex items-center toggle-glass",
+        enabled && "active"
       )}
     >
       <div
         className={cn(
-          "absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform",
+          "w-5 h-5 bg-white rounded-full shadow-md transition-transform",
           enabled ? "translate-x-6" : "translate-x-1"
         )}
       />

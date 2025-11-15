@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { formatTime, formatDate, cn } from "@/lib/utils"
 import { Search, WifiIcon, BatteryFull, Volume2, Moon } from "lucide-react"
 import { useWindowStore } from "@/store/useWindowStore"
+import { useSystemStore } from "@/store/useSystemStore"
 
 interface DropdownMenu {
   label: string
@@ -18,13 +19,20 @@ export function MenuBar() {
   const [date, setDate] = useState(formatDate())
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [showControlCenter, setShowControlCenter] = useState(false)
-  const [volume, setVolume] = useState(70)
-  const [brightness, setBrightness] = useState(80)
-  const [wifiEnabled, setWifiEnabled] = useState(true)
+  const [showSearch, setShowSearch] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const controlRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   const { createWindow } = useWindowStore()
+  const {
+    volume,
+    setVolume,
+    brightness,
+    setBrightness,
+    wifiEnabled,
+    setWifiEnabled,
+  } = useSystemStore()
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -42,6 +50,9 @@ export function MenuBar() {
       }
       if (controlRef.current && !controlRef.current.contains(event.target as Node)) {
         setShowControlCenter(false)
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearch(false)
       }
     }
 
@@ -195,7 +206,7 @@ export function MenuBar() {
         </div>
 
         {/* Menu Items */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {menuItems.map((menu) => (
             <div key={menu.label} className="relative">
               <button
@@ -233,12 +244,29 @@ export function MenuBar() {
       {/* Right Side */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3 text-gray-700 relative">
-          <button
-            onClick={() => setShowControlCenter(false)}
-            className="hover:bg-black/5 p-1 rounded transition-colors"
-          >
-            <Search className="w-3.5 h-3.5 opacity-80 hover:opacity-100 cursor-pointer transition-opacity" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="hover:bg-black/5 p-1 rounded transition-colors"
+            >
+              <Search className="w-3.5 h-3.5 opacity-80 hover:opacity-100 cursor-pointer transition-opacity" />
+            </button>
+
+            {/* Search Popup */}
+            {showSearch && (
+              <div
+                ref={searchRef}
+                className="absolute top-7 right-0 w-96 vibrancy-menu rounded-2xl shadow-2xl border border-black/10 p-4 z-[60]"
+              >
+                <input
+                  type="text"
+                  placeholder="Spotlight 搜索"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300/50 bg-white/60 text-[13px] text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => setShowControlCenter(!showControlCenter)}
@@ -266,13 +294,13 @@ export function MenuBar() {
                     <button
                       onClick={() => setWifiEnabled(!wifiEnabled)}
                       className={cn(
-                        "w-10 h-6 rounded-full transition-colors",
-                        wifiEnabled ? "bg-blue-500" : "bg-gray-300"
+                        "relative w-10 h-6 rounded-full transition-all flex items-center toggle-glass",
+                        wifiEnabled && "active"
                       )}
                     >
                       <div
                         className={cn(
-                          "w-4 h-4 bg-white rounded-full shadow-md transition-transform mt-1",
+                          "w-4 h-4 bg-white rounded-full shadow-md transition-transform",
                           wifiEnabled ? "translate-x-5" : "translate-x-1"
                         )}
                       />
@@ -295,7 +323,7 @@ export function MenuBar() {
                     max="100"
                     value={volume}
                     onChange={(e) => setVolume(Number(e.target.value))}
-                    className="w-full accent-blue-500"
+                    className="w-full glass-slider"
                   />
                 </div>
 
@@ -311,7 +339,7 @@ export function MenuBar() {
                     max="100"
                     value={brightness}
                     onChange={(e) => setBrightness(Number(e.target.value))}
-                    className="w-full accent-blue-500"
+                    className="w-full glass-slider"
                   />
                 </div>
               </div>
@@ -345,7 +373,7 @@ function MenuItem({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "w-full text-left px-4 py-1 text-[13px] transition-colors",
+        "w-full text-left px-4 py-1 text-[13px] transition-colors rounded-md",
         disabled
           ? "text-gray-400 cursor-not-allowed"
           : "text-gray-800 hover:bg-blue-500 hover:text-white"

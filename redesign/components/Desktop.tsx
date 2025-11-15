@@ -1,11 +1,35 @@
 "use client"
 
+import { useEffect } from "react"
 import { MenuBar } from "./MenuBar"
 import { Dock } from "./Dock"
 import { WindowManager } from "./WindowManager"
 import { motion } from "framer-motion"
+import { useWindowStore } from "@/store/useWindowStore"
 
 export function Desktop() {
+  const { closeWindow, activeWindow } = useWindowStore()
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+      const cmdKey = isMac ? e.metaKey : e.ctrlKey
+
+      // Command/Ctrl + Q: Close active window (only prevent if there's an active window)
+      if (cmdKey && e.key === 'q' && activeWindow) {
+        e.preventDefault()
+        closeWindow(activeWindow)
+      }
+
+      // Note: Other shortcuts like Ctrl+Backspace, Ctrl+Tab, Ctrl+C are intentionally
+      // not prevented to preserve native browser behavior until specific app functionality
+      // is implemented that requires overriding them.
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [activeWindow, closeWindow])
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

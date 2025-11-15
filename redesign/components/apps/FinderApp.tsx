@@ -16,7 +16,7 @@ export function FinderApp() {
   ]
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full no-select">
       {/* Sidebar */}
       <div className="w-48 vibrancy-sidebar border-r border-black/5 p-2 space-y-1">
         {categories.map((category) => (

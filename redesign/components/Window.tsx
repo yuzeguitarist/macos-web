@@ -127,7 +127,7 @@ export function Window({ window }: WindowProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => closeWindow(window.id)}
-            className="traffic-light bg-red-500 hover:bg-red-600 group"
+            className="traffic-light bg-red-500 hover:bg-red-600 group flex items-center justify-center"
             onMouseEnter={(e) => {
               const icon = e.currentTarget.querySelector("svg")
               if (icon) icon.classList.remove("hidden")
@@ -141,7 +141,7 @@ export function Window({ window }: WindowProps) {
           </button>
           <button
             onClick={() => minimizeWindow(window.id)}
-            className="traffic-light bg-yellow-500 hover:bg-yellow-600 group"
+            className="traffic-light bg-yellow-500 hover:bg-yellow-600 group flex items-center justify-center"
             onMouseEnter={(e) => {
               const icon = e.currentTarget.querySelector("svg")
               if (icon) icon.classList.remove("hidden")
@@ -155,7 +155,7 @@ export function Window({ window }: WindowProps) {
           </button>
           <button
             onClick={() => maximizeWindow(window.id)}
-            className="traffic-light bg-green-500 hover:bg-green-600 group"
+            className="traffic-light bg-green-500 hover:bg-green-600 group flex items-center justify-center"
             onMouseEnter={(e) => {
               const icon = e.currentTarget.querySelector("svg")
               if (icon) icon.classList.remove("hidden")
