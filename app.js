@@ -13,6 +13,13 @@ class MacOS {
         this.notesContext = null;
         this.browserContext = null;
         this.wallpaper = this.loadWallpaper();
+        // 全局拖动状态管理（事件委托模式，避免内存泄漏）
+        this.dragState = {
+            isDragging: false,
+            appName: null,
+            initialX: 0,
+            initialY: 0
+        };
         this.init();
     }
 
@@ -27,10 +34,35 @@ class MacOS {
                 desktop.style.opacity = '1';
             }, 50);
             this.initEventListeners();
+            this.initGlobalDragListeners();
             this.updateTime();
             setInterval(() => this.updateTime(), 1000);
             this.applyWallpaper();
         }, 4000);
+    }
+
+    // 全局拖动监听器（单例模式，避免内存泄漏）
+    initGlobalDragListeners() {
+        document.addEventListener('mousemove', (e) => {
+            if (!this.dragState.isDragging) return;
+
+            const windowEl = this.windows.get(this.dragState.appName);
+            if (!windowEl) return;
+
+            e.preventDefault();
+            const currentX = e.clientX - this.dragState.initialX;
+            const currentY = e.clientY - this.dragState.initialY;
+
+            // 限制窗口不超出屏幕
+            const finalY = Math.max(24, currentY);
+
+            windowEl.style.left = currentX + 'px';
+            windowEl.style.top = finalY + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            this.dragState.isDragging = false;
+        });
     }
 
     loadWallpaper() {
@@ -178,9 +210,9 @@ class MacOS {
     }
 
     refreshFileConsumers() {
-        this.windows.forEach((window, appName) => {
+        this.windows.forEach((windowEl, appName) => {
             if (appName === 'finder') {
-                this.renderFinderFiles(window);
+                this.renderFinderFiles(windowEl);
             } else if (appName === 'notes') {
                 if (this.notesContext?.renderList) {
                     this.notesContext.renderList();
@@ -189,7 +221,7 @@ class MacOS {
                 if (this.browserContext?.updateOptions) {
                     this.browserContext.updateOptions();
                 } else {
-                    this.updateBrowserFileOptions(window);
+                    this.updateBrowserFileOptions(windowEl);
                 }
             }
         });
@@ -251,8 +283,8 @@ class MacOS {
         const appConfig = this.getAppConfig(appName);
         if (!appConfig) return;
 
-        const window = this.createWindow(appName, appConfig);
-        this.windows.set(appName, window);
+        const windowEl = this.createWindow(appName, appConfig);
+        this.windows.set(appName, windowEl);
         
         // 更新 Dock 指示器
         const dockItem = document.querySelector(`.dock-item[data-app="${appName}"]`);
@@ -307,20 +339,20 @@ class MacOS {
     }
 
     createWindow(appName, config) {
-        const window = document.createElement('div');
-        window.className = 'window';
-        window.dataset.app = appName;
-        window.style.width = config.width + 'px';
-        window.style.height = config.height + 'px';
-        
-        // 居中显示
+        const windowEl = document.createElement('div');
+        windowEl.className = 'window';
+        windowEl.dataset.app = appName;
+        windowEl.style.width = config.width + 'px';
+        windowEl.style.height = config.height + 'px';
+
+        // 居中显示（修复：使用全局window对象而非局部变量）
         const left = (window.innerWidth - config.width) / 2;
         const top = (window.innerHeight - config.height) / 2 - 30;
-        window.style.left = left + 'px';
-        window.style.top = Math.max(50, top) + 'px';
-        window.style.zIndex = this.zIndexCounter++;
+        windowEl.style.left = left + 'px';
+        windowEl.style.top = Math.max(50, top) + 'px';
+        windowEl.style.zIndex = this.zIndexCounter++;
 
-        window.innerHTML = `
+        windowEl.innerHTML = `
             <div class="window-header">
                 <div class="window-controls">
                     <div class="window-control close"></div>
@@ -334,20 +366,20 @@ class MacOS {
             </div>
         `;
 
-        document.getElementById('windowsContainer').appendChild(window);
+        document.getElementById('windowsContainer').appendChild(windowEl);
 
         // 添加窗口事件
-        this.addWindowEvents(window, appName);
-        
+        this.addWindowEvents(windowEl, appName);
+
         // 设置为活动窗口
         this.focusWindow(appName);
 
         // 初始化应用特定功能
         setTimeout(() => {
-            this.initAppFeatures(window, appName);
+            this.initAppFeatures(windowEl, appName);
         }, 100);
 
-        return window;
+        return windowEl;
     }
 
     initAppFeatures(window, appName) {
@@ -392,50 +424,30 @@ class MacOS {
         }
     }
 
-    addWindowEvents(window, appName) {
-        const header = window.querySelector('.window-header');
-        const closeBtn = window.querySelector('.window-control.close');
-        const minimizeBtn = window.querySelector('.window-control.minimize');
-        const maximizeBtn = window.querySelector('.window-control.maximize');
+    addWindowEvents(windowEl, appName) {
+        const header = windowEl.querySelector('.window-header');
+        const closeBtn = windowEl.querySelector('.window-control.close');
+        const minimizeBtn = windowEl.querySelector('.window-control.minimize');
+        const maximizeBtn = windowEl.querySelector('.window-control.maximize');
 
-        // 拖动功能
-        let isDragging = false;
-        let currentX, currentY, initialX, initialY;
-
+        // 拖动功能（使用全局拖动状态，避免内存泄漏）
         header.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('window-control')) return;
-            
-            isDragging = true;
-            initialX = e.clientX - window.offsetLeft;
-            initialY = e.clientY - window.offsetTop;
-            
+
+            this.dragState.isDragging = true;
+            this.dragState.appName = appName;
+            this.dragState.initialX = e.clientX - windowEl.offsetLeft;
+            this.dragState.initialY = e.clientY - windowEl.offsetTop;
+
             this.focusWindow(appName);
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            e.preventDefault();
-            currentX = e.clientX - initialX;
-            currentY = e.clientY - initialY;
-            
-            // 限制窗口不超出屏幕
-            currentY = Math.max(24, currentY);
-            
-            window.style.left = currentX + 'px';
-            window.style.top = currentY + 'px';
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
         });
 
         // 点击窗口聚焦
-        window.addEventListener('mousedown', (e) => {
+        windowEl.addEventListener('mousedown', (e) => {
             this.focusWindow(appName);
             // 如果点击的是终端，聚焦输入框
             if (appName === 'terminal' && !e.target.classList.contains('window-control')) {
-                const input = window.querySelector('.terminal-input');
+                const input = windowEl.querySelector('.terminal-input');
                 if (input) {
                     setTimeout(() => input.focus(), 0);
                 }
@@ -467,9 +479,9 @@ class MacOS {
     }
 
     closeWindow(appName) {
-        const window = this.windows.get(appName);
-        if (window) {
-            window.remove();
+        const windowEl = this.windows.get(appName);
+        if (windowEl) {
+            windowEl.remove();
             this.windows.delete(appName);
 
             if (appName === 'notes') {
@@ -492,53 +504,53 @@ class MacOS {
     }
 
     minimizeWindow(appName) {
-        const window = this.windows.get(appName);
-        if (window) {
-            window.classList.add('minimizing');
+        const windowEl = this.windows.get(appName);
+        if (windowEl) {
+            windowEl.classList.add('minimizing');
             setTimeout(() => {
-                window.style.display = 'none';
-                window.classList.remove('minimizing');
+                windowEl.style.display = 'none';
+                windowEl.classList.remove('minimizing');
             }, 300);
         }
     }
 
     maximizeWindow(appName) {
-        const window = this.windows.get(appName);
-        if (!window) return;
+        const windowEl = this.windows.get(appName);
+        if (!windowEl) return;
 
         // 计算器不允许最大化
         if (appName === 'calculator') return;
 
-        if (window.dataset.maximized === 'true') {
+        if (windowEl.dataset.maximized === 'true') {
             // 还原
-            window.style.width = window.dataset.originalWidth;
-            window.style.height = window.dataset.originalHeight;
-            window.style.left = window.dataset.originalLeft;
-            window.style.top = window.dataset.originalTop;
-            window.dataset.maximized = 'false';
+            windowEl.style.width = windowEl.dataset.originalWidth;
+            windowEl.style.height = windowEl.dataset.originalHeight;
+            windowEl.style.left = windowEl.dataset.originalLeft;
+            windowEl.style.top = windowEl.dataset.originalTop;
+            windowEl.dataset.maximized = 'false';
         } else {
             // 最大化
-            window.dataset.originalWidth = window.style.width;
-            window.dataset.originalHeight = window.style.height;
-            window.dataset.originalLeft = window.style.left;
-            window.dataset.originalTop = window.style.top;
-            
-            window.style.width = 'calc(100vw - 20px)';
-            window.style.height = 'calc(100vh - 120px)';
-            window.style.left = '10px';
-            window.style.top = '34px';
-            window.dataset.maximized = 'true';
+            windowEl.dataset.originalWidth = windowEl.style.width;
+            windowEl.dataset.originalHeight = windowEl.style.height;
+            windowEl.dataset.originalLeft = windowEl.style.left;
+            windowEl.dataset.originalTop = windowEl.style.top;
+
+            windowEl.style.width = 'calc(100vw - 20px)';
+            windowEl.style.height = 'calc(100vh - 120px)';
+            windowEl.style.left = '10px';
+            windowEl.style.top = '34px';
+            windowEl.dataset.maximized = 'true';
         }
     }
 
     focusWindow(appName) {
         this.deactivateAllWindows();
-        const window = this.windows.get(appName);
-        if (window) {
-            window.style.display = 'flex';
-            window.style.zIndex = this.zIndexCounter++;
+        const windowEl = this.windows.get(appName);
+        if (windowEl) {
+            windowEl.style.display = 'flex';
+            windowEl.style.zIndex = this.zIndexCounter++;
             this.activeWindow = appName;
-            
+
             // 更新菜单栏
             const config = this.getAppConfig(appName);
             if (config) {
@@ -643,14 +655,33 @@ class MacOS {
             const item = document.createElement('div');
             item.className = 'finder-file';
             item.dataset.fileName = file.name;
-            item.innerHTML = `
-                <div class="finder-file-icon">${this.getFinderIcon(file.type)}</div>
-                <div class="finder-file-info">
-                    <div class="finder-file-name">${file.title || file.name}</div>
-                    <div class="finder-file-meta">${file.name} · ${new Date(file.updatedAt || Date.now()).toLocaleString('zh-CN', { hour12: false })}</div>
-                    <div class="finder-file-preview">${this.getFilePreview(file)}</div>
-                </div>
-            `;
+
+            // 安全修复：使用DOM方法构建，避免XSS
+            const icon = document.createElement('div');
+            icon.className = 'finder-file-icon';
+            icon.innerHTML = this.getFinderIcon(file.type);
+
+            const info = document.createElement('div');
+            info.className = 'finder-file-info';
+
+            const fileName = document.createElement('div');
+            fileName.className = 'finder-file-name';
+            fileName.textContent = file.title || file.name;
+
+            const fileMeta = document.createElement('div');
+            fileMeta.className = 'finder-file-meta';
+            fileMeta.textContent = `${file.name} · ${new Date(file.updatedAt || Date.now()).toLocaleString('zh-CN', { hour12: false })}`;
+
+            const filePreview = document.createElement('div');
+            filePreview.className = 'finder-file-preview';
+            filePreview.textContent = this.getFilePreview(file);
+
+            info.appendChild(fileName);
+            info.appendChild(fileMeta);
+            info.appendChild(filePreview);
+
+            item.appendChild(icon);
+            item.appendChild(info);
 
             item.addEventListener('click', () => {
                 filesContainer.querySelectorAll('.finder-file').forEach(el => el.classList.remove('selected'));
@@ -735,10 +766,18 @@ class MacOS {
     executeTerminalCommand(terminal, command) {
         const inputLine = terminal.querySelector('.terminal-input-line');
 
-        // 显示输入的命令
+        // 显示输入的命令（安全修复：使用textContent防止XSS）
         const commandLine = document.createElement('div');
         commandLine.className = 'terminal-line';
-        commandLine.innerHTML = `<span class="terminal-prompt">user@macos ~ % </span>${command || ''}`;
+
+        const prompt = document.createElement('span');
+        prompt.className = 'terminal-prompt';
+        prompt.textContent = 'user@macos ~ % ';
+
+        const cmdText = document.createTextNode(command || '');
+
+        commandLine.appendChild(prompt);
+        commandLine.appendChild(cmdText);
         terminal.insertBefore(commandLine, inputLine);
 
         if (command === '') {
@@ -970,10 +1009,19 @@ class MacOS {
                 const item = document.createElement('div');
                 item.className = 'notes-list-item';
                 item.dataset.noteName = file.name;
-                item.innerHTML = `
-                    <div class="notes-item-title">${file.title || file.name}</div>
-                    <div class="notes-item-preview">${this.getFilePreview(file)}</div>
-                `;
+
+                // 安全修复：使用textContent防止XSS
+                const titleEl = document.createElement('div');
+                titleEl.className = 'notes-item-title';
+                titleEl.textContent = file.title || file.name;
+
+                const previewEl = document.createElement('div');
+                previewEl.className = 'notes-item-preview';
+                previewEl.textContent = this.getFilePreview(file);
+
+                item.appendChild(titleEl);
+                item.appendChild(previewEl);
+
                 item.addEventListener('click', () => selectNote(file.name));
                 if (file.name === this.currentNoteId) {
                     item.classList.add('active');
@@ -1120,11 +1168,26 @@ class MacOS {
                     shouldResetDisplay = false;
                     display.textContent = '0';
                 } else if (value === '±') {
+                    // 安全修复：验证数值有效性，防止显示NaN
                     const num = parseFloat(currentValue);
+                    if (!isFinite(num)) {
+                        display.textContent = 'Error';
+                        currentValue = '0';
+                        shouldResetDisplay = true;
+                        return;
+                    }
                     currentValue = String(num === 0 ? 0 : -num);
                     display.textContent = currentValue;
                 } else if (value === '%') {
-                    currentValue = String(parseFloat(currentValue) / 100);
+                    // 安全修复：验证数值有效性，防止显示NaN
+                    const num = parseFloat(currentValue);
+                    if (!isFinite(num)) {
+                        display.textContent = 'Error';
+                        currentValue = '0';
+                        shouldResetDisplay = true;
+                        return;
+                    }
+                    currentValue = String(num / 100);
                     display.textContent = currentValue;
                 } else if (['+', '−', '×', '÷'].includes(value)) {
                     // 只有在用户已输入第二个操作数后才执行待处理的运算
